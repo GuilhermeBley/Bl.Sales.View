@@ -26,9 +26,16 @@ const fakeOrderData = [
   { number: 21, date: "2025-01-21", products: [{ code: 13, name: "Produto 13" }, { code: 14, name: "Produto 14" }, { code: 15, name: "Produto 15" }], customer: { code: 6, name: "Fernanda Lima" }, totalPrice: 680.45 }
 ];
 
+interface PageData{
+  isSubmitting: boolean
+}
+
 const Home: React.FC = () => {
   const { user } = useAuth();
   const [ordersSelectedToExport, setOrdersSelectedToExport] = useState<number[]>([]);
+  const [pageData, setPageData] = useState<PageData>({
+    isSubmitting: false,
+  });
 
   // Toggle select all orders
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,8 +68,22 @@ const Home: React.FC = () => {
       ordersSelectedToExport.includes(order.number)
     );
 
-    console.log('Exportando para o Bling:', selectedOrders);
-    alert(`Exportando ${selectedOrders.length} pedido(s) para o Bling!`);
+    try
+    {
+      setPageData(p => ({
+        ...p,
+        isSubmitting: true
+      }))
+
+      // TODO: request for each item
+    }
+    finally
+    {
+      setPageData(p => ({
+        ...p,
+        isSubmitting: false
+      }))
+    }
     
     // Here you would typically make an API call to Bling
     // For now, we'll just log to console and show an alert
@@ -90,7 +111,7 @@ const Home: React.FC = () => {
 
         {/* Orders Table */}
         <div className="card">
-          <div className="card-body">
+          <div className="card-body overflow-auto" style={{maxHeight: "60vh", height: "60vh"}}>
             <div className="table-responsive">
               <table className="table table-striped table-hover">
                 <thead className="table-dark">
