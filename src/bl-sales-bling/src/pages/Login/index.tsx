@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Navigate } from 'react-router-dom';
 
 const Login: React.FC = () => {

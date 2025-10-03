@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import Navbar from '../components/Navbar';
+import { useAuth } from '../../context/AuthContext';
+import Navbar from '../../components/Navbar';
 
 const fakeOrderData = [
   { number: 1, date: "2025-01-01", products: [{ code: 1, name: "Produto 1" }], customer: { code: 1, name: "Rubens Maria" }, totalPrice: 200.00 },

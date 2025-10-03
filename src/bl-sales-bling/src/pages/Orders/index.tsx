@@ -1,5 +1,5 @@
-import { useAuth } from '../context/AuthContext';
-import Navbar from '../components/Navbar';
+import { useAuth } from '../../context/AuthContext';
+import Navbar from '../../components/Navbar';
 
 // Mock data - replace with actual API calls
 const mockOrders = [
