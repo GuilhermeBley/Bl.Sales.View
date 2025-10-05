@@ -37,6 +37,19 @@ const Home: React.FC = () => {
       pageData.isSubmitting === false;
   }
 
+  const checkOrderButtonInfo = (order: any) => {
+    // TODO : add a kind to the order
+    if (pageData.isSubmitting) return {
+      canCheck: false,
+      buttonMessage: "Aguarde a importação finalizar..."
+    };
+
+    return {
+      canCheck: true,
+      buttonMessage: "Selecione para envio de exportação."
+    }
+  }
+
   // Toggle select all orders
   const handleSelectAll = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -132,7 +145,7 @@ const Home: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {pageData.orders.map((order) => (
+                  {pageData.orders.map(o => ({...o, checkBoxInfo: checkOrderButtonInfo(o)})).map((order) => (
                     <tr key={order.number}>
                       <td>
                         <input
@@ -140,6 +153,8 @@ const Home: React.FC = () => {
                           className="form-check-input"
                           checked={ordersSelectedToExport.includes(order.number)}
                           onChange={() => handleOrderSelection(order.number)}
+                          disabled={order.checkBoxInfo.canCheck === false}
+                          title={order.checkBoxInfo.buttonMessage}
                         />
                       </td>
                       <td>{order.number}</td>
