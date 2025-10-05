@@ -32,6 +32,11 @@ const Home: React.FC = () => {
 
   }, []);
 
+  const canSubmitOrders = () => {
+    return ordersSelectedToExport.length > 0 &&
+      pageData.isSubmitting === false;
+  }
+
   // Toggle select all orders
   const handleSelectAll = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -156,7 +161,7 @@ const Home: React.FC = () => {
             <button
               className="btn btn-primary btn-lg"
               onClick={handleExportToBling}
-              disabled={ordersSelectedToExport.length === 0}
+              disabled={canSubmitOrders() === false}
             >
               Exportar para o Bling ({ordersSelectedToExport.length})
             </button>
