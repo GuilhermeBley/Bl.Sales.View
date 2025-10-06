@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getSourceOrders } from '../../services/orderService';
+import { getSourceOrders, postTargetOrder } from '../../services/orderService';
 import Navbar from '../../components/Navbar';
 
 interface PageData{
@@ -71,7 +71,7 @@ const Home: React.FC = () => {
   };
 
   // Handle export to Bling
-  const handleExportToBling = () => {
+  const handleExportToBling = async () => {
     if (ordersSelectedToExport.length === 0) {
       alert('Por favor, selecione pelo menos um pedido para exportar.');
       return;
@@ -88,7 +88,15 @@ const Home: React.FC = () => {
         isSubmitting: true
       }))
 
-      // TODO: request for each item
+      for (let element of selectedOrders)
+      {
+        await postTargetOrder({
+        // TODO: process items
+        });
+
+        element.Status = "Processed";
+        setPageData(p => ({...p})); // refreshing the page
+      }
     }
     finally
     {

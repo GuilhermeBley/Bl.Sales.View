@@ -29,6 +29,7 @@ const fakeOrderData = [
 export const postTargetOrder = async (order : PostOrderModel) => {
     await new Promise(resolve => setTimeout(resolve, 1_000)); // fake loading
 
+    console.log('Processing order.')
     return {
         orderCode: crypto.randomUUID()
     }
