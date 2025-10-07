@@ -96,6 +96,7 @@ const Home: React.FC = () => {
 
         element.Status = "Processed";
         setPageData(p => ({...p})); // refreshing the page
+        setOrdersSelectedToExport(p => [...p.filter(x => x != element.number)])
       }
     }
     finally
