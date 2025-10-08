@@ -182,13 +182,21 @@ const Home: React.FC = () => {
         {/* Export Button */}
         <div className="row mt-4">
           <div className="col text-end">
-            <button
-              className="btn btn-primary btn-lg"
-              onClick={handleExportToBling}
-              disabled={canSubmitOrders() === false}
-            >
-              Exportar para o Bling ({ordersSelectedToExport.length})
-            </button>
+            {pageData.isSubmitting
+            ? <>
+              <button className="btn btn-primary btn-lg" disabled>
+                Exportar para o Bling <i className="fa-solid fa-arrow-rotate-right fa-spin"></i>
+              </button>
+            </>
+            : <>
+              <button
+                className="btn btn-primary btn-lg"
+                onClick={handleExportToBling}
+                disabled={canSubmitOrders() === false}
+              >
+                Exportar para o Bling ({ordersSelectedToExport.length})
+              </button>
+            </>}
           </div>
         </div>
       </div>

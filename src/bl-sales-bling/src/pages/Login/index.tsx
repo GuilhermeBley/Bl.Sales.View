@@ -72,12 +72,11 @@ const Login: React.FC = () => {
                     Your token must be at least 10 characters long.
                   </div>
                 </div>
-
+                
                 <button 
                   type="submit" 
                   className="btn btn-primary w-100"
-                  disabled={!token.trim()}
-                >
+                  disabled={!token.trim()}>
                   Login
                 </button>
               </form>
