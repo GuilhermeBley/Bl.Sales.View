@@ -91,6 +91,8 @@ const Home: React.FC = () => {
 
       for (let element of selectedOrders)
       {
+        if (element.status == OrderStatus.Exported) continue;
+
         await postTargetOrder({
         // TODO: process items
         });
@@ -157,7 +159,10 @@ const Home: React.FC = () => {
                 <tbody>
                   {pageData.orders.map(o => ({...o, checkBoxInfo: checkOrderButtonInfo(o)})).map((order) => (
                     <tr key={order.number}>
-                      <td>
+
+                      {order.status === OrderStatus.Exported 
+                      ? <td><i className="fa-solid fa-check"></i></td>
+                      : <td>
                         <input
                           type="checkbox"
                           className="form-check-input"
@@ -166,7 +171,8 @@ const Home: React.FC = () => {
                           disabled={order.checkBoxInfo.canCheck === false}
                           title={order.checkBoxInfo.buttonMessage}
                         />
-                      </td>
+                      </td>}
+
                       <td>{order.number}</td>
                       <td>{new Date(order.date).toLocaleDateString('pt-BR')}</td>
                       <td>{order.products.length}</td>
