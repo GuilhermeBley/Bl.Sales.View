@@ -2,15 +2,16 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getSourceOrders, postTargetOrder } from '../../services/orderService';
 import Navbar from '../../components/Navbar';
+import { OrderDataToExport, OrderStatus } from '../../model/OrderDataToExport';
 
 interface PageData{
   isSubmitting: boolean,
-  orders: any[]
+  orders: OrderDataToExport[]
 }
 
 const Home: React.FC = () => {
   const { user } = useAuth();
-  const [ordersSelectedToExport, setOrdersSelectedToExport] = useState<number[]>([]);
+  const [ordersSelectedToExport, setOrdersSelectedToExport] = useState<string[]>([]);
   const [pageData, setPageData] = useState<PageData>({
     isSubmitting: false,
     orders: []
@@ -60,7 +61,7 @@ const Home: React.FC = () => {
   };
 
   // Toggle individual order selection
-  const handleOrderSelection = (orderNumber: number) => {
+  const handleOrderSelection = (orderNumber: string) => {
     setOrdersSelectedToExport(prev => {
       if (prev.includes(orderNumber)) {
         return prev.filter(num => num !== orderNumber);
@@ -94,7 +95,7 @@ const Home: React.FC = () => {
         // TODO: process items
         });
 
-        element.Status = "Processed";
+        element.status = OrderStatus.Exported;
         setPageData(p => ({...p})); // refreshing the page
         setOrdersSelectedToExport(p => [...p.filter(x => x != element.number)])
       }
