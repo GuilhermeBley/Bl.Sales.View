@@ -55,7 +55,7 @@ const Navbar: React.FC = () => {
                 {/* Masked token display */}
                 <div className="nav-item">
                   <span className="nav-link text-light">
-                    Token: {maskToken(user.token)}
+                    Perfil: {maskToken(user.profile)}
                   </span>
                 </div>
                 

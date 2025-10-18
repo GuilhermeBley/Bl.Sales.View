@@ -21,7 +21,9 @@ const Home: React.FC = () => {
 
     const getAndSetOrders = async () => {
 
-      let orders = await getSourceOrders('', '');
+      if (!user) return;
+
+      let orders = await getSourceOrders(user.profile, user.key);
 
       setPageData(p => ({
         ...p,

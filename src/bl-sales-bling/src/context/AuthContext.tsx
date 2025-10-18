@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, AuthContextType } from '../model/auth';
+import LocalStorageManager from '../services/localStorageService'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -18,21 +19,23 @@ export const useAuth = (): AuthContextType => {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const localStorageManager = new LocalStorageManager<User>('user-settings');
 
   // Check for existing token on app start
   useEffect(() => {
-    const token = localStorage.getItem('userToken');
-    if (token) {
+    const user = localStorageManager.get();
+    if (user) {
       // In a real app, you might validate the token with your backend
-      setUser({ token });
+      setUser(user);
     }
     setLoading(false);
   }, []);
 
-  const login = (token: string): void => {
+  const login = (profile: string, key: string): void => {
     // Save token to localStorage
-    localStorage.setItem('userToken', token);
-    setUser({ token });
+    let user: User = { profile, key };
+    localStorageManager.set(user)
+    setUser(user);
   };
 
   const logout = (): void => {

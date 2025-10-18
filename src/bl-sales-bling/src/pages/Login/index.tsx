@@ -3,7 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Navigate } from 'react-router-dom';
 
 const Login: React.FC = () => {
-  const [token, setToken] = useState<string>('');
+  const [profile, setProfile] = useState<string>('');
+  const [key, setKey] = useState<string>('');
   const [error, setError] = useState<string>('');
   const { login, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
@@ -17,19 +18,20 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError('');
 
+    setProfile(profile?.trim().toLocaleLowerCase())
     // Basic token validation
-    if (!token.trim()) {
-      setError('Please enter a token');
+    if (!profile.trim()) {
+      setError('Insira um perfil.');
       return;
     }
 
-    if (token.length < 10) {
-      setError('Token must be at least 10 characters long');
+    if (key.length < 10) {
+      setError('Chave deve conter no mínimo 10 caracteres.');
       return;
     }
 
     // Login user
-    login(token);
+    login(profile, key);
     navigate('/');
   };
 
@@ -50,33 +52,51 @@ const Login: React.FC = () => {
               <h2 className="card-title text-center mb-4">Login</h2>
               
               <form onSubmit={handleSubmit}>
-                <div className="mb-3">
-                  <label htmlFor="token" className="form-label">
-                    Token
-                  </label>
-                  <input
-                    type="password"
-                    className={`form-control ${error ? 'is-invalid' : ''}`}
-                    id="token"
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                    placeholder="Enter your token"
-                    aria-describedby="tokenHelp"
-                  />
+
                   {error && (
                     <div className="invalid-feedback">
                       {error}
                     </div>
                   )}
-                  <div id="tokenHelp" className="form-text">
-                    Your token must be at least 10 characters long.
+
+                <div className="mb-3">
+                  <label htmlFor="profile" className="form-label">
+                    Perfil
+                  </label>
+                  <input
+                    type="text"
+                    className={`form-control ${error ? 'is-invalid' : ''}`}
+                    id="iprofile"
+                    value={profile}
+                    onChange={(e) => setProfile(e.target.value)}
+                    placeholder="Coloque o seu perfil."
+                    aria-describedby="profileHelp"
+                  />
+                </div>
+
+                  
+                <div className="mb-3">
+                  <label htmlFor="key" className="form-label">
+                    Chave
+                  </label>
+                  <input
+                    type="password"
+                    className={`form-control ${error ? 'is-invalid' : ''}`}
+                    id="ikey"
+                    value={key}
+                    onChange={(e) => setKey(e.target.value)}
+                    placeholder="Coloque a chave principal"
+                    aria-describedby="keyHelp"
+                  />
+                  <div id="keyHelp" className="form-text">
+                    Chave deve conter no mínimo 10 caracteres.
                   </div>
                 </div>
                 
                 <button 
                   type="submit" 
                   className="btn btn-primary w-100"
-                  disabled={!token.trim()}>
+                  disabled={(!profile.trim() && key.length < 10)}>
                   Login
                 </button>
               </form>
