@@ -18,7 +18,14 @@ export const postTargetOrder = async (order : PostOrderModel) => {
 export const getSourceOrders = async (profile: string, key: string) : Promise<OrderDataToExport[]> => {
     let result = await api.get(`/api/profile/${profile}/order?accountSecret=${key}`)
         .then(response => response.data)
-        .then(data => data)
+        .then(data => {
+            if (Array.isArray(data.data) === false)
+            {
+                throw new Error("Failed to get data.");
+            }
+
+            return data.data.map((x: any) => createOrderFromJson(x, profile, key));
+        })
         .catch(error => {
             console.error(error)
             return [];
