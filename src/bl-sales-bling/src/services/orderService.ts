@@ -1,5 +1,5 @@
 
-import { OrderDataToExport, OrderStatus } from '../model/OrderDataToExport';
+import { OrderDataToExport, OrderStatus, ProductInfo } from '../model/OrderDataToExport';
 import api from './apiService'
 
 interface PostOrderModel {
@@ -28,14 +28,17 @@ export const getSourceOrders = async (profile: string, key: string) : Promise<Or
 }
 
 // Factory function to create OrderDataToExport instances
-const createOrderFromJson = (jsonOrder: any): OrderDataToExport => {
+const createOrderFromJson = (jsonOrder: any, profile :string, key: string): OrderDataToExport => {
   
+    if (!jsonOrder)
+        throw new Error('Invalid object.')
+
   const order: OrderDataToExport = {
     status: OrderStatus.Loading,
     statusMessage: undefined,
-    number: jsonOrder.numeroLoja || jsonOrder.numero?.toString(),
-    id: jsonOrder.id.toString(),
-    profile: jsonOrder.contato?.nome || 'Unknown',
+    number: jsonOrder.numero,
+    id: jsonOrder.id,
+    profile: profile || 'Unknown',
     date: new Date(jsonOrder.data),
     products: [], // You can map products here if available in JSON
     customer: {
@@ -45,17 +48,54 @@ const createOrderFromJson = (jsonOrder: any): OrderDataToExport => {
       type: jsonOrder.contato?.tipoPessoa
     },
     totalPrice: jsonOrder.total || jsonOrder.totalProdutos,
-    
     // Implement the method directly
-    async processStatus(): Promise<void> {
+    async processStatus(products: ProductInfo[]): Promise<void> {
       try {
-        console.log(`Processing order ${this.number} with status: ${this.status}`);
-        // Add your processing logic here
-        await new Promise(resolve => setTimeout(resolve, 100));
-        console.log(`Order ${this.number} status processed successfully`);
+        await api.get(`/api/profile/${profile}/order/${this.id}?accountSecret=${key}`)
+            .then(response => response.data)
+            .then(data => {
+                if (data.transferInfo)
+                {
+                    this.status = OrderStatus.Exported;
+                    this.statusMessage = 'Pedido já exportado.'
+                }
+
+                if (Array.isArray(data.itens) === false)
+                {
+                    this.status = OrderStatus.Error;
+                    this.statusMessage = 'Produtos não encontrados.'
+                    return;
+                }
+                
+                let productsFailedToMatch :any = [];
+                data.itens.forEach((item: any) => {
+                    let productFound = products.find(x => x.id === item.produto?.id);
+
+                    if (!productFound)
+                    {
+                        productsFailedToMatch.push(item);
+                        return;
+                    }
+
+                    this.products.push(productFound)
+                });
+
+                if (productsFailedToMatch.length > 0)
+                {
+                    console.error('failed to match products.', productsFailedToMatch);
+                    this.status = OrderStatus.Error;
+                    this.statusMessage = 'Produtos não encontrados.'
+                }
+            })
+            .catch(error => {
+                console.error(`Failed to process order ${this.number}:`, error);
+                this.status = OrderStatus.Error
+                this.statusMessage = 'Falha ao coletar dados de pedido.'
+            });
       } catch (error) {
         console.error(`Failed to process order ${this.number}:`, error);
-        throw error;
+        this.status = OrderStatus.Error
+        this.statusMessage = 'Falha ao coletar dados de pedido.'
       }
     }
   };

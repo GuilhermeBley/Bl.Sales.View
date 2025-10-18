@@ -1,5 +1,16 @@
 
 
+export interface ProductInfo {
+  id: number,
+  profile: string,
+  code: string,
+  quantity: number,
+  value: number,
+  description: string,
+  stockQuantity: number,
+  unityKind: string
+}
+
 export enum OrderStatus {
   Loading,
   CanBeExported,
@@ -10,13 +21,13 @@ export enum OrderStatus {
 export interface OrderDataToExport {
   status: OrderStatus,
   statusMessage?: string,
-  number: string,
-  id: string,
+  number: number,
+  id: number,
   profile: string,
   date: Date, 
   products: any[], 
   customer: any,
   totalPrice: number,
 
-  processStatus() : Promise<void>;
+  processStatus(availableProducts: ProductInfo[]) : Promise<void>;
 }

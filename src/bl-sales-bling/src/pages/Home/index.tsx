@@ -11,7 +11,7 @@ interface PageData{
 
 const Home: React.FC = () => {
   const { user } = useAuth();
-  const [ordersSelectedToExport, setOrdersSelectedToExport] = useState<string[]>([]);
+  const [ordersSelectedToExport, setOrdersSelectedToExport] = useState<number[]>([]);
   const [pageData, setPageData] = useState<PageData>({
     isSubmitting: false,
     orders: []
@@ -63,7 +63,7 @@ const Home: React.FC = () => {
   };
 
   // Toggle individual order selection
-  const handleOrderSelection = (orderNumber: string) => {
+  const handleOrderSelection = (orderNumber: number) => {
     setOrdersSelectedToExport(prev => {
       if (prev.includes(orderNumber)) {
         return prev.filter(num => num !== orderNumber);
