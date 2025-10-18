@@ -1,16 +1,22 @@
 
 
 export enum OrderStatus {
-  CanBeExported = 1,
-  Exported = 2,
-  Error = 3
+  Loading,
+  CanBeExported,
+  Exported,
+  Error,
 }
 
 export interface OrderDataToExport {
-  status?: OrderStatus,
-  number: string, 
+  status: OrderStatus,
+  statusMessage?: string,
+  number: string,
+  id: string,
+  profile: string,
   date: Date, 
   products: any[], 
   customer: any,
   totalPrice: number,
+
+  processStatus() : Promise<void>;
 }

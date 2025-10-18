@@ -21,7 +21,7 @@ const Home: React.FC = () => {
 
     const getAndSetOrders = async () => {
 
-      let orders = await getSourceOrders();
+      let orders = await getSourceOrders('', '');
 
       setPageData(p => ({
         ...p,
@@ -54,7 +54,9 @@ const Home: React.FC = () => {
   // Toggle select all orders
   const handleSelectAll = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setOrdersSelectedToExport(pageData.orders.map(order => order.number));
+      setOrdersSelectedToExport(pageData.orders
+        .filter(order => order.status === OrderStatus.CanBeExported)
+        .map(order => order.number));
     } else {
       setOrdersSelectedToExport([]);
     }
@@ -160,9 +162,8 @@ const Home: React.FC = () => {
                   {pageData.orders.map(o => ({...o, checkBoxInfo: checkOrderButtonInfo(o)})).map((order) => (
                     <tr key={order.number}>
 
-                      {order.status === OrderStatus.Exported 
-                      ? <td><i className="fa-solid fa-check"></i></td>
-                      : <td>
+                      {order.status === OrderStatus.CanBeExported 
+                      ? <td>
                         <input
                           type="checkbox"
                           className="form-check-input"
@@ -171,7 +172,8 @@ const Home: React.FC = () => {
                           disabled={order.checkBoxInfo.canCheck === false}
                           title={order.checkBoxInfo.buttonMessage}
                         />
-                      </td>}
+                      </td>
+                      : <td><i className="fa-solid fa-check"></i></td>}
 
                       <td>{order.number}</td>
                       <td>{new Date(order.date).toLocaleDateString('pt-BR')}</td>

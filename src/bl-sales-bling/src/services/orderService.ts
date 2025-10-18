@@ -1,33 +1,10 @@
 
-import { OrderDataToExport } from '../model/OrderDataToExport';
+import { OrderDataToExport, OrderStatus } from '../model/OrderDataToExport';
+import api from './apiService'
 
 interface PostOrderModel {
 
 }
-
-const fakeOrderData: OrderDataToExport[] = [
-  { number: '1', date: new Date(2025, 1, 1), products: [{ code: 1, name: "Produto 1" }], customer: { code: 1, name: "Rubens Maria" }, totalPrice: 200.00 },
-  { number: '2', date: new Date(2025, 1, 1), products: [{ code: 2, name: "Produto 2" }, { code: 3, name: "Produto 3" }], customer: { code: 2, name: "Ana Silva" }, totalPrice: 350.50 },
-  { number: '3', date: new Date(2025, 1, 3), products: [{ code: 4, name: "Produto 4" }], customer: { code: 3, name: "Carlos Santos" }, totalPrice: 120.00 },
-  { number: '4', date: new Date(2025, 1, 4), products: [{ code: 1, name: "Produto 1" }, { code: 5, name: "Produto 5" }], customer: { code: 4, name: "Mariana Costa" }, totalPrice: 450.75 },
-  { number: '5', date: new Date(2025, 1, 5), products: [{ code: 6, name: "Produto 6" }], customer: { code: 5, name: "João Pereira" }, totalPrice: 89.90 },
-  { number: '6', date: new Date(2025, 1, 6), products: [{ code: 7, name: "Produto 7" }, { code: 8, name: "Produto 8" }, { code: 9, name: "Produto 9" }], customer: { code: 6, name: "Fernanda Lima" }, totalPrice: 620.30 },
-  { number: '7', date: new Date(2025, 1, 7), products: [{ code: 10, name: "Produto 10" }], customer: { code: 7, name: "Ricardo Alves" }, totalPrice: 150.00 },
-  { number: '8', date: new Date(2025, 1, 8), products: [{ code: 2, name: "Produto 2" }, { code: 4, name: "Produto 4" }], customer: { code: 8, name: "Patrícia Rocha" }, totalPrice: 275.25 },
-  { number: '9', date: new Date(2025, 1, 9), products: [{ code: 11, name: "Produto 11" }], customer: { code: 9, name: "Bruno Oliveira" }, totalPrice: 199.99 },
-  { number: '10', date: new Date(2025, 1, 10), products: [{ code: 12, name: "Produto 12" }, { code: 13, name: "Produto 13" }], customer: { code: 10, name: "Juliana Martins" }, totalPrice: 410.60 },
-  { number: '11', date: new Date(2025, 1, 11), products: [{ code: 3, name: "Produto 3" }], customer: { code: 1, name: "Rubens Maria" }, totalPrice: 180.00 },
-  { number: '12', date: new Date(2025, 1, 12), products: [{ code: 14, name: "Produto 14" }, { code: 15, name: "Produto 15" }], customer: { code: 2, name: "Ana Silva" }, totalPrice: 530.40 },
-  { number: '13', date: new Date(2025, 1, 13), products: [{ code: 5, name: "Produto 5" }, { code: 6, name: "Produto 6" }, { code: 7, name: "Produto 7" }], customer: { code: 11, name: "Lucas Ferreira" }, totalPrice: 720.80 },
-  { number: '14', date: new Date(2025, 1, 14), products: [{ code: 8, name: "Produto 8" }], customer: { code: 12, name: "Amanda Souza" }, totalPrice: 95.50 },
-  { number: '15', date: new Date(2025, 1, 15), products: [{ code: 16, name: "Produto 16" }, { code: 17, name: "Produto 17" }], customer: { code: 3, name: "Carlos Santos" }, totalPrice: 380.25 },
-  { number: '16', date: new Date(2025, 1, 16), products: [{ code: 9, name: "Produto 9" }, { code: 10, name: "Produto 10" }], customer: { code: 13, name: "Roberto Nunes" }, totalPrice: 290.00 },
-  { number: '17', date: new Date(2025, 1, 17), products: [{ code: 18, name: "Produto 18" }], customer: { code: 4, name: "Mariana Costa" }, totalPrice: 210.75 },
-  { number: '18', date: new Date(2025, 1, 18), products: [{ code: 19, name: "Produto 19" }, { code: 20, name: "Produto 20" }], customer: { code: 14, name: "Tatiane Ramos" }, totalPrice: 495.90 },
-  { number: '19', date: new Date(2025, 1, 19), products: [{ code: 1, name: "Produto 1" }, { code: 11, name: "Produto 11" }], customer: { code: 5, name: "João Pereira" }, totalPrice: 325.60 },
-  { number: '20', date: new Date(2025, 1, 20), products: [{ code: 12, name: "Produto 12" }], customer: { code: 15, name: "Diego Costa" }, totalPrice: 145.00 },
-  { number: '21', date: new Date(2025, 1, 21), products: [{ code: 13, name: "Produto 13" }, { code: 14, name: "Produto 14" }, { code: 15, name: "Produto 15" }], customer: { code: 6, name: "Fernanda Lima" }, totalPrice: 680.45 }
-];
 
 export const postTargetOrder = async (order : PostOrderModel) => {
     await new Promise(resolve => setTimeout(resolve, 1_000)); // fake loading
@@ -38,8 +15,50 @@ export const postTargetOrder = async (order : PostOrderModel) => {
     }
 }
 
-export const getSourceOrders = async () => {
-    await new Promise(resolve => setTimeout(resolve, 2_000)); // fake loading
+export const getSourceOrders = async (profile: string, key: string) : Promise<OrderDataToExport[]> => {
+    let result = await api.get(`/api/profile/${profile}/order?accountSecret=${key}`)
+        .then(response => response.data)
+        .then(data => data)
+        .catch(error => {
+            console.error(error)
+            return [];
+        });
     
-    return fakeOrderData;
+    return result;
 }
+
+// Factory function to create OrderDataToExport instances
+const createOrderFromJson = (jsonOrder: any): OrderDataToExport => {
+  
+  const order: OrderDataToExport = {
+    status: OrderStatus.Loading,
+    statusMessage: undefined,
+    number: jsonOrder.numeroLoja || jsonOrder.numero?.toString(),
+    id: jsonOrder.id.toString(),
+    profile: jsonOrder.contato?.nome || 'Unknown',
+    date: new Date(jsonOrder.data),
+    products: [], // You can map products here if available in JSON
+    customer: {
+      id: jsonOrder.contato?.id,
+      name: jsonOrder.contato?.nome,
+      document: jsonOrder.contato?.numeroDocumento,
+      type: jsonOrder.contato?.tipoPessoa
+    },
+    totalPrice: jsonOrder.total || jsonOrder.totalProdutos,
+    
+    // Implement the method directly
+    async processStatus(): Promise<void> {
+      try {
+        console.log(`Processing order ${this.number} with status: ${this.status}`);
+        // Add your processing logic here
+        await new Promise(resolve => setTimeout(resolve, 100));
+        console.log(`Order ${this.number} status processed successfully`);
+      } catch (error) {
+        console.error(`Failed to process order ${this.number}:`, error);
+        throw error;
+      }
+    }
+  };
+  
+  return order;
+};
