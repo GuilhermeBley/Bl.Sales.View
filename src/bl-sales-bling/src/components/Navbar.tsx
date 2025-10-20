@@ -1,13 +1,20 @@
 import { useAuth } from '../context/AuthContext';
+import { useAuthExportAccount } from '../context/AuthExportAccountContext';
 import { Link, useNavigate } from 'react-router-dom';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
+  const { userExportAccount, logoutExportAccount } = useAuthExportAccount();
   const navigate = useNavigate();
 
   const handleLogout = (): void => {
     logout();
+    logoutExportAccount()
     navigate('/login');
+  };
+
+  const handleLogoutJustExportAccount = (): void => {
+    logoutExportAccount();
   };
 
   // Function to mask the token (show first 4 and last 4 characters)
@@ -58,15 +65,23 @@ const Navbar: React.FC = () => {
                     Perfil: {maskToken(user.profile)}
                   </span>
                 </div>
-                
+
                 {/* Logout button */}
                 <div className="nav-item">
-                  <button
-                    className="btn btn-outline-light btn-sm ms-2"
-                    onClick={handleLogout}
-                  >
-                    Logout
-                  </button>
+
+                  <div className="dropdown">
+                    <button className="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    </button>
+                    <ul className="dropdown-menu">
+                      {userExportAccount
+                      ? <>
+                        <li><a className="dropdown-item" href="#" onClick={handleLogoutJustExportAccount}>Sair de conta de exportação</a></li>
+                        <li><hr className="dropdown-divider" /></li>
+                      </>
+                      : <> {/** Hide elements */} </>}
+                      <li><a className="dropdown-item text-danger" href="#" onClick={handleLogout}>Sair</a></li>
+                    </ul>
+                  </div>
                 </div>
               </>
             )}
