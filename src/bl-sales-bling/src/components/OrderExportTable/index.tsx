@@ -1,5 +1,4 @@
-
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { OrderDataToExport, OrderStatus } from '../../model/OrderDataToExport';
 import { User } from '../../model/auth';
 import { getSourceOrders, postTargetOrder } from '../../services/orderService';
@@ -16,46 +15,44 @@ interface InputPageData {
 }
 
 const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
-
-    if (!user) return <></>
-
     const [componentData, setComponentData] = useState<PageData>({
         isSubmitting: false,
         orders: [],
         ordersSelectedToExport: []
     });
 
+    // Use useRef to track if data has been loaded
+    const hasLoaded = useRef(false);
+
     useEffect(() => {
+        // Early returns to prevent double execution
+        if (!user || hasLoaded.current) return;
 
         const getAndSetOrders = async () => {
+            hasLoaded.current = true; // Mark as loaded immediately
+            console.log(`Loading orders from profile ${user.profile}`);
 
-            if (!user) return;
-
-            let orders = await getSourceOrders(user.profile, user.key);
-
-            setComponentData(p => ({
-                ...p,
-                orders: orders
-            }));
+            try {
+                let orders = await getSourceOrders(user.profile, user.key);
+                setComponentData(p => ({
+                    ...p,
+                    orders: orders
+                }));
+            } catch (error) {
+                console.error('Failed to load orders:', error);
+                hasLoaded.current = false;
+            }
         }
 
         getAndSetOrders();
 
-    }, []);
-    const canSubmitOrders = () => {
-        return componentData.ordersSelectedToExport.length > 0 &&
-            componentData.isSubmitting === false;
-    }
+        return () => {
+            hasLoaded.current = false;
+        };
+    }, [user]); // Add user as dependency
 
-    const setOrdersSelectedToExport = (ordersToExport: number[]) => {
-        setComponentData(p => ({
-            ...p,
-            ordersSelectedToExport: ordersToExport
-        }));
-    }
-
-    const checkOrderButtonInfo = (order: any) => {
-        // TODO : add a kind to the order
+    // Memoize the checkOrderButtonInfo function
+    const checkOrderButtonInfo = useCallback((order: any) => {
         if (componentData.isSubmitting) return {
             canCheck: false,
             buttonMessage: "Aguarde a importação finalizar..."
@@ -64,11 +61,23 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
         return {
             canCheck: true,
             buttonMessage: "Selecione para envio de exportação."
-        }
-    }
+        };
+    }, [componentData.isSubmitting]);
 
-    // Toggle select all orders
-    const handleSelectAll = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const canSubmitOrders = useCallback(() => {
+        return componentData.ordersSelectedToExport.length > 0 &&
+            componentData.isSubmitting === false;
+    }, [componentData.ordersSelectedToExport.length, componentData.isSubmitting]);
+
+    const setOrdersSelectedToExport = useCallback((ordersToExport: number[]) => {
+        setComponentData(p => ({
+            ...p,
+            ordersSelectedToExport: ordersToExport
+        }));
+    }, []);
+
+    // Memoize the select all handler
+    const handleSelectAll = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
             setOrdersSelectedToExport(componentData.orders
                 .filter(order => order.status === OrderStatus.CanBeExported)
@@ -76,18 +85,24 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
         } else {
             setOrdersSelectedToExport([]);
         }
-    };
+    }, [componentData.orders, setOrdersSelectedToExport]);
 
-    // Toggle individual order selection
-    const handleOrderSelection = (orderNumber: number) => {
-        let prev = componentData.ordersSelectedToExport;
-        if (prev.includes(orderNumber)) {
-            prev = prev.filter(num => num !== orderNumber);
-        } else {
-            prev = [...prev, orderNumber];
-        }
-        setOrdersSelectedToExport(prev);
-    };
+    // Memoize individual order selection
+    const handleOrderSelection = useCallback((orderNumber: number) => {
+        setComponentData(p => {
+            const prev = p.ordersSelectedToExport;
+            let newSelection;
+            if (prev.includes(orderNumber)) {
+                newSelection = prev.filter(num => num !== orderNumber);
+            } else {
+                newSelection = [...prev, orderNumber];
+            }
+            return {
+                ...p,
+                ordersSelectedToExport: newSelection
+            };
+        });
+    }, []);
 
     // Handle export to Bling
     const handleExportToBling = async () => {
@@ -104,8 +119,9 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
             setComponentData(p => ({
                 ...p,
                 isSubmitting: true
-            }))
+            }));
 
+            // Process orders sequentially
             for (let element of selectedOrders) {
                 if (element.status == OrderStatus.Exported) continue;
 
@@ -113,26 +129,29 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
                     // TODO: process items
                 });
 
-                element.status = OrderStatus.Exported;
-                setComponentData(p => ({ 
+                // Update the order status in the local state
+                setComponentData(p => ({
                     ...p,
-                    // removing already processed one
-                    ordersSelectedToExport: [...p.ordersSelectedToExport.filter(x => x != element.number)]
+                    orders: p.orders.map(order =>
+                        order.number === element.number
+                            ? { ...order, status: OrderStatus.Exported }
+                            : order
+                    ),
+                    ordersSelectedToExport: p.ordersSelectedToExport.filter(x => x !== element.number)
                 }));
             }
-        }
-        finally {
+        } catch (error) {
+            console.error('Export failed:', error);
+            alert('Erro ao exportar pedidos. Tente novamente.');
+        } finally {
             setComponentData(p => ({
                 ...p,
                 isSubmitting: false
-            }))
+            }));
         }
-
-        // Here you would typically make an API call to Bling
-        // For now, we'll just log to console and show an alert
     };
 
-    // Format currency
+    // Format currency - memoize if it becomes expensive
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
@@ -140,52 +159,58 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
         }).format(value);
     };
 
+    // Early return after hooks
+    if (!user) return <></>;
+
     return (
         <div>
-            <table className="table table-striped table-hover">
-                <thead className="table-dark">
-                    <tr>
-                        <th scope="col" style={{ width: '50px' }}>
-                            <input
-                                type="checkbox"
-                                className="form-check-input"
-                                checked={componentData.ordersSelectedToExport.length === componentData.orders.length && componentData.orders.length > 0}
-                                onChange={handleSelectAll}
-                            />
-                        </th>
-                        <th scope="col">Número do Pedido</th>
-                        <th scope="col">Data do Pedido</th>
-                        <th scope="col">Quantidade de Produtos</th>
-                        <th scope="col">Nome do Cliente</th>
-                        <th scope="col">Valor</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {componentData.orders.map(o => ({ ...o, checkBoxInfo: checkOrderButtonInfo(o) })).map((order) => (
-                        <tr key={order.number}>
-
-                            {order.status === OrderStatus.CanBeExported
-                                ? <td>
-                                    <input
-                                        type="checkbox"
-                                        className="form-check-input"
-                                        checked={componentData.ordersSelectedToExport.includes(order.number)}
-                                        onChange={() => handleOrderSelection(order.number)}
-                                        disabled={order.checkBoxInfo.canCheck === false}
-                                        title={order.checkBoxInfo.buttonMessage}
-                                    />
-                                </td>
-                                : <td><i className="fa-solid fa-check"></i></td>}
-
-                            <td>{order.number}</td>
-                            <td>{new Date(order.date).toLocaleDateString('pt-BR')}</td>
-                            <td>{order.products.length}</td>
-                            <td>{order.customer.name}</td>
-                            <td>{formatCurrency(order.totalPrice)}</td>
+            <div className="table-responsive overflow-auto" style={{ maxHeight: "60vh", height: "60vh" }}>
+                <table className="table table-striped table-hover">
+                    <thead className="table-dark">
+                        <tr>
+                            <th scope="col" style={{ width: '50px' }}>
+                                <input
+                                    type="checkbox"
+                                    className="form-check-input"
+                                    checked={componentData.ordersSelectedToExport.length === componentData.orders.length && componentData.orders.length > 0}
+                                    onChange={handleSelectAll}
+                                />
+                            </th>
+                            <th scope="col">Número do Pedido</th>
+                            <th scope="col">Data do Pedido</th>
+                            <th scope="col">Quantidade de Produtos</th>
+                            <th scope="col">Nome do Cliente</th>
+                            <th scope="col">Valor</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {componentData.orders.map((order) => {
+                            const checkBoxInfo = checkOrderButtonInfo(order);
+                            return (
+                                <tr key={order.number}>
+                                    {order.status === OrderStatus.CanBeExported
+                                        ? <td>
+                                            <input
+                                                type="checkbox"
+                                                className="form-check-input"
+                                                checked={componentData.ordersSelectedToExport.includes(order.number)}
+                                                onChange={() => handleOrderSelection(order.number)}
+                                                disabled={!checkBoxInfo.canCheck}
+                                                title={checkBoxInfo.buttonMessage}
+                                            />
+                                        </td>
+                                        : <td><i className="fa-solid fa-check"></i></td>}
+                                    <td>{order.number}</td>
+                                    <td>{new Date(order.date).toLocaleDateString('pt-BR')}</td>
+                                    <td>{order.products.length}</td>
+                                    <td>{order.customer.name}</td>
+                                    <td>{formatCurrency(order.totalPrice)}</td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
 
             {/* Export Button */}
             <div className="row mt-4">
@@ -200,7 +225,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
                             <button
                                 className="btn btn-primary btn-lg"
                                 onClick={handleExportToBling}
-                                disabled={canSubmitOrders() === false}
+                                disabled={!canSubmitOrders()}
                             >
                                 Exportar para o Bling ({componentData.ordersSelectedToExport.length})
                             </button>
