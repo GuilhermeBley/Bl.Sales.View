@@ -159,6 +159,28 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
         }).format(value);
     };
 
+    const renderStatusCell = (order: OrderDataToExport) => {
+        const checkBoxInfo = checkOrderButtonInfo(order);
+        switch (order.status) {
+            case OrderStatus.CanBeExported:
+                return (
+                    <input
+                        type="checkbox"
+                        className="form-check-input"
+                        checked={componentData.ordersSelectedToExport.includes(order.number)}
+                        onChange={() => handleOrderSelection(order.number)}
+                        disabled={!checkBoxInfo.canCheck}
+                        title={checkBoxInfo.buttonMessage}
+                    />
+                );
+            case OrderStatus.Loading:
+                return <i className="fa-solid fa-spinner fa-spin"></i>;
+            case OrderStatus.Exported:
+            default:
+                return <i className="fa-solid fa-check"></i>;
+        }
+    };
+
     // Early return after hooks
     if (!user) return <></>;
 
@@ -176,6 +198,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
                                     onChange={handleSelectAll}
                                 />
                             </th>
+                            <th scope="col">Status</th>
                             <th scope="col">Número do Pedido</th>
                             <th scope="col">Data do Pedido</th>
                             <th scope="col">Quantidade de Produtos</th>
@@ -185,21 +208,10 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
                     </thead>
                     <tbody>
                         {componentData.orders.map((order) => {
-                            const checkBoxInfo = checkOrderButtonInfo(order);
                             return (
                                 <tr key={order.number}>
-                                    {order.status === OrderStatus.CanBeExported
-                                        ? <td>
-                                            <input
-                                                type="checkbox"
-                                                className="form-check-input"
-                                                checked={componentData.ordersSelectedToExport.includes(order.number)}
-                                                onChange={() => handleOrderSelection(order.number)}
-                                                disabled={!checkBoxInfo.canCheck}
-                                                title={checkBoxInfo.buttonMessage}
-                                            />
-                                        </td>
-                                        : <td><i className="fa-solid fa-check"></i></td>}
+                                    <td>{renderStatusCell(order)}</td>
+                                    <td>{order.statusMessage}</td>
                                     <td>{order.number}</td>
                                     <td>{new Date(order.date).toLocaleDateString('pt-BR')}</td>
                                     <td>{order.products.length}</td>
