@@ -69,8 +69,9 @@ const Navbar: React.FC = () => {
                 {/* Logout button */}
                 <div className="nav-item">
 
-                  <div className="dropdown">
-                    <button className="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  <div className="dropdown dropstart">
+                    <button className="btn btn-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i className="bi bi-gear-fill"></i>
                     </button>
                     <ul className="dropdown-menu">
                       {userExportAccount
