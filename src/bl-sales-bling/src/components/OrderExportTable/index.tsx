@@ -186,6 +186,62 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
 
     return (
         <div>
+            {/* Header Section */}
+            <div className="card mb-4">
+                <div className="card-body">
+                    <div className="row align-items-center">
+                        <div className="col-md-6">
+                            <h5 className="card-title mb-1">Pedidos</h5>
+                            <p className="text-muted mb-0">
+                                Total: {componentData.orders.length} pedidos |
+                                Selecionados: {componentData.ordersSelectedToExport.length} |
+                                Disponível para exportação: {componentData.orders.filter(order => order.status === OrderStatus.CanBeExported).length}
+                            </p>
+                        </div>
+                        <div className="col-md-6 text-md-end">
+                            <div className="btn-group" role="group">
+                                <button
+                                    className="btn btn-outline-secondary"
+                                    title="Atualizar lista"
+                                >
+                                    <i className="fa-solid fa-rotate"></i> Atualizar
+                                </button>
+                                <button
+                                    className="btn btn-outline-primary"
+                                    title="Filtrar pedidos"
+                                >
+                                    <i className="fa-solid fa-filter"></i> Filtrar
+                                </button>
+                                <button
+                                    className="btn btn-outline-success"
+                                    disabled={componentData.ordersSelectedToExport.length === 0}
+                                    title="Exportar para CSV"
+                                >
+                                    <i className="fa-solid fa-file-csv"></i> CSV
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Quick Stats Row */}
+                    <div className="row mt-3">
+                        <div className="col-auto">
+                            <span className="badge bg-primary">Todos: {componentData.orders.length}</span>
+                        </div>
+                        <div className="col-auto">
+                            <span className="badge bg-success">Prontos: {componentData.orders.filter(order => order.status === OrderStatus.CanBeExported).length}</span>
+                        </div>
+                        <div className="col-auto">
+                            <span className="badge bg-warning">Já exportados: {componentData.orders.filter(order => order.status ===  OrderStatus.Exported).length}</span>
+                        </div>
+                        <div className="col-auto">
+                            <span className="badge bg-danger">Problemas: {componentData.orders.filter(order => order.status === OrderStatus.Error).length}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Table Section */}
             <div className="table-responsive overflow-auto" style={{ maxHeight: "60vh", height: "60vh" }}>
                 <table className="table table-striped table-hover">
                     <thead className="table-dark">
@@ -210,8 +266,15 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
                         {componentData.orders.map((order) => {
                             return (
                                 <tr key={order.number}>
+                                    <td>
+                                        <input
+                                            type="checkbox"
+                                            className="form-check-input"
+                                            checked={componentData.ordersSelectedToExport.includes(order.number)}
+                                            onChange={() => handleOrderSelection(order.number)}
+                                        />
+                                    </td>
                                     <td>{renderStatusCell(order)}</td>
-                                    <td>{order.statusMessage}</td>
                                     <td>{order.number}</td>
                                     <td>{new Date(order.date).toLocaleDateString('pt-BR')}</td>
                                     <td>{order.products.length}</td>
