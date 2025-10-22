@@ -1,5 +1,5 @@
 
-import { OrderDataToExport, OrderStatus, ProductInfo } from '../model/OrderDataToExport';
+import { OrderDataToExport, OrderStatus, ProductInfo, CustomerInfo } from '../model/OrderDataToExport';
 import api from './apiService'
 
 interface PostOrderModel {
@@ -25,6 +25,68 @@ export const getSourceOrders = async (profile: string, key: string) : Promise<Or
             }
 
             return data.data.map((x: any) => createOrderFromJson(x, profile, key));
+        })
+        .catch(error => {
+            console.error(error)
+            return [];
+        });
+    
+    return result;
+}
+
+export const getCustomer = async (profile: string, key: string, documentNumber: string) : Promise<CustomerInfo | undefined> => {
+    let result = await api.get(`/api/profile/${profile}/product?accountSecret=${key}&documentNumber=${documentNumber}`)
+        .then(response => response.data)
+        .then(data => {
+            if (Array.isArray(data.data) === false)
+            {
+                throw new Error("Failed to get data.");
+            }
+
+            if (data.data.length === 0) return undefined;
+
+            return data.data.map((x: any) => {
+                let p : CustomerInfo = {
+                    code: x.codigo,
+                    documentNumber: x.numeroDocumento,
+                    id: x.id,
+                    name: x.nome,
+                    phone: x.telefone,
+                    profile: profile
+                };
+
+                return p;
+            })[0];
+        })
+        .catch(error => {
+            console.error(error)
+            return [];
+        });
+    
+    return result;
+}
+
+export const getProducts = async (profile: string, key: string) : Promise<ProductInfo[]> => {
+    let result = await api.get(`/api/profile/${profile}/customers?accountSecret=${key}`)
+        .then(response => response.data)
+        .then(data => {
+            if (Array.isArray(data.data) === false)
+            {
+                throw new Error("Failed to get data.");
+            }
+
+            return data.data.map((x: any) => {
+                let p : ProductInfo = {
+                    code: x.codigo,
+                    description: x.descricaoCurta,
+                    id: x.id,
+                    profile: profile,
+                    stockQuantity: x.estoque?.saldoVirtualTotal,
+                    value: x.preco
+                };
+
+                return p;
+            });
         })
         .catch(error => {
             console.error(error)

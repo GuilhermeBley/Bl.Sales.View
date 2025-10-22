@@ -4,12 +4,20 @@ export interface ProductInfo {
   id: number,
   profile: string,
   code: string,
-  quantity: number,
   value: number,
   description: string,
   stockQuantity: number,
-  unityKind: string
 }
+
+export interface CustomerInfo {
+  id: number,
+  profile: string,
+  name: string,
+  code: string,
+  documentNumber: string,
+  phone: string,
+}
+
 
 export enum OrderStatus {
   Loading,
