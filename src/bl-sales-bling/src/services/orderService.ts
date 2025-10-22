@@ -15,8 +15,8 @@ export const postTargetOrder = async (order : PostOrderModel) => {
     }
 }
 
-export const getSourceOrders = async (profile: string, key: string) : Promise<OrderDataToExport[]> => {
-    let result = await api.get(`/api/profile/${profile}/order?accountSecret=${key}`)
+export const getOrders = async (profile: string, key: string, date: Date | undefined = undefined) : Promise<OrderDataToExport[]> => {
+    let result = await api.get(`/api/profile/${profile}/order?accountSecret=${key}&initialDate=${date?.toISOString().split('T')[0]}`)
         .then(response => response.data)
         .then(data => {
             if (Array.isArray(data.data) === false)
@@ -103,7 +103,7 @@ const createOrderFromJson = (jsonOrder: any, profile :string, key: string): Orde
         throw new Error('Invalid object.')
 
   const order: OrderDataToExport = {
-    status: OrderStatus.Loading,
+    status: OrderStatus.NotStartedYet,
     statusMessage: undefined,
     number: jsonOrder.numero,
     id: jsonOrder.id,

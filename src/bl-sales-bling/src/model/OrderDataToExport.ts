@@ -20,6 +20,7 @@ export interface CustomerInfo {
 
 
 export enum OrderStatus {
+  NotStartedYet,
   Loading,
   CanBeExported,
   Exported,

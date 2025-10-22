@@ -1,12 +1,15 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { OrderDataToExport, OrderStatus } from '../../model/OrderDataToExport';
 import { User } from '../../model/auth';
-import { getSourceOrders, postTargetOrder } from '../../services/orderService';
+import { getOrders, postTargetOrder } from '../../services/orderService';
+import LoadingComponent from '../LoadingComponent';
 
 interface PageData {
     isSubmitting: boolean,
     orders: OrderDataToExport[],
     ordersSelectedToExport: number[],
+    selectedDate: Date,
+    isLoadingOrders: boolean
 }
 
 interface InputPageData {
@@ -14,11 +17,20 @@ interface InputPageData {
     userToExport: User,
 }
 
+const getDefaultDate = () => {
+    const currentDate = new Date();
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(currentDate.getDate() - 3);
+    return threeDaysAgo;
+}
+
 const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
     const [componentData, setComponentData] = useState<PageData>({
         isSubmitting: false,
         orders: [],
-        ordersSelectedToExport: []
+        ordersSelectedToExport: [],
+        selectedDate: getDefaultDate(),
+        isLoadingOrders: true
     });
 
     // Use useRef to track if data has been loaded
@@ -28,41 +40,12 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
         // Early returns to prevent double execution
         if (!user || hasLoaded.current) return;
 
-        const getAndSetOrders = async () => {
-            hasLoaded.current = true; // Mark as loaded immediately
-            console.log(`Loading orders from profile ${user.profile}`);
-
-            try {
-                let orders = await getSourceOrders(user.profile, user.key);
-                setComponentData(p => ({
-                    ...p,
-                    orders: orders
-                }));
-            } catch (error) {
-                console.error('Failed to load orders:', error);
-                hasLoaded.current = false;
-            }
-        }
-
         getAndSetOrders();
 
         return () => {
             hasLoaded.current = false;
         };
-    }, [user]); // Add user as dependency
-
-    // Memoize the checkOrderButtonInfo function
-    const checkOrderButtonInfo = useCallback((order: any) => {
-        if (componentData.isSubmitting) return {
-            canCheck: false,
-            buttonMessage: "Aguarde a importação finalizar..."
-        };
-
-        return {
-            canCheck: true,
-            buttonMessage: "Selecione para envio de exportação."
-        };
-    }, [componentData.isSubmitting]);
+    }, [user]);
 
     const canSubmitOrders = useCallback(() => {
         return componentData.ordersSelectedToExport.length > 0 &&
@@ -160,29 +143,83 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
     };
 
     const renderStatusCell = (order: OrderDataToExport) => {
-        const checkBoxInfo = checkOrderButtonInfo(order);
         switch (order.status) {
             case OrderStatus.CanBeExported:
-                return (
-                    <input
-                        type="checkbox"
-                        className="form-check-input"
-                        checked={componentData.ordersSelectedToExport.includes(order.number)}
-                        onChange={() => handleOrderSelection(order.number)}
-                        disabled={!checkBoxInfo.canCheck}
-                        title={checkBoxInfo.buttonMessage}
-                    />
-                );
+                return <span className="badge bg-primary" title='Pronto para exportação.'>Processado</span>;
+            case OrderStatus.NotStartedYet:
+                return <span className="badge bg-warning" title='Não verificado, clique no botão "Validar Exportação".'>Não Validado</span>;
             case OrderStatus.Loading:
-                return <i className="fa-solid fa-spinner fa-spin"></i>;
+                return <span className="badge bg-info" title='Carregando...'>Carregando...</span>;
             case OrderStatus.Exported:
+                return <span className="badge bg-success" title='Pedido já exportado'>Exportado</span>;
             default:
-                return <i className="fa-solid fa-check"></i>;
+                return <span className="badge bg-danger" title='Ocorreu um erro no processamento.'>Erro</span>;
         }
     };
 
+    const getMinDate = () => {
+        const today = new Date();
+        const oneWeekLater = new Date(today);
+        oneWeekLater.setDate(today.getDate() - 7);
+        return oneWeekLater.toISOString().split('T')[0];
+    };
+
+    const getMaxDate = () => {
+        const today = new Date();
+        return today.toISOString().split('T')[0];
+    };
+
+    const getDateRangeText = () => {
+        const minDate = componentData.selectedDate.toISOString().split('T')[0];
+        const maxDate = getMaxDate();
+
+        const formatDate = (dateString: string) => {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR');
+        };
+
+        return `${formatDate(minDate)} à ${formatDate(maxDate)}`;
+    };
+
+    const handleDateChange = (event: any) => {
+        const selectedDate = event.target.value;
+
+        let date = new Date(selectedDate)
+        console.log('Date changed to ' + selectedDate);
+        setComponentData(prev => ({
+            ...prev,
+            selectedDate: date
+        }));
+
+        getAndSetOrders(date);
+    };
+
+    const getAndSetOrders = async (date: Date | undefined = undefined) => {
+        setComponentData(p => ({
+            ...p,
+            isLoadingOrders: true
+        }));
+        console.log(`Loading orders from profile ${user.profile}`);
+
+        try {
+            date ??= componentData.selectedDate;
+            let orders = await getOrders(user.profile, user.key, date);
+            setComponentData(p => ({
+                ...p,
+                orders: orders,
+                isLoadingOrders: false
+            }));
+        } catch (error) {
+            console.error('Failed to load orders:', error);
+            hasLoaded.current = false;
+        }
+    }
+
     // Early return after hooks
     if (!user) return <></>;
+
+    if (componentData.isLoadingOrders)
+        return <LoadingComponent/>
 
     return (
         <div>
@@ -199,43 +236,28 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
                             </p>
                         </div>
                         <div className="col-md-6 text-md-end">
-                            <div className="btn-group" role="group">
-                                <button
-                                    className="btn btn-outline-secondary"
-                                    title="Atualizar lista"
-                                >
-                                    <i className="fa-solid fa-rotate"></i> Atualizar
-                                </button>
-                                <button
-                                    className="btn btn-outline-primary"
-                                    title="Filtrar pedidos"
-                                >
-                                    <i className="fa-solid fa-filter"></i> Filtrar
-                                </button>
-                                <button
-                                    className="btn btn-outline-success"
-                                    disabled={componentData.ordersSelectedToExport.length === 0}
-                                    title="Exportar para CSV"
-                                >
-                                    <i className="fa-solid fa-file-csv"></i> CSV
-                                </button>
+                            <div className="input-group" role="group">
+                                <input
+                                    type="date"
+                                    className="form-control"
+                                    id="orderDate"
+                                    value={componentData.selectedDate.toISOString().split('T')[0] || ''}
+                                    onChange={handleDateChange}
+                                    min={getMinDate()}
+                                    max={getMaxDate()}
+                                />
+                                <div className="input-group-append">
+                                    <button
+                                        className="btn btn-outline-secondary"
+                                        title="Atualizar lista"
+                                    >
+                                        <i className="fa-solid fa-rotate"></i> Validar Exportação
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-
-                    {/* Quick Stats Row */}
-                    <div className="row mt-3">
-                        <div className="col-auto">
-                            <span className="badge bg-primary">Todos: {componentData.orders.length}</span>
-                        </div>
-                        <div className="col-auto">
-                            <span className="badge bg-success">Prontos: {componentData.orders.filter(order => order.status === OrderStatus.CanBeExported).length}</span>
-                        </div>
-                        <div className="col-auto">
-                            <span className="badge bg-warning">Já exportados: {componentData.orders.filter(order => order.status ===  OrderStatus.Exported).length}</span>
-                        </div>
-                        <div className="col-auto">
-                            <span className="badge bg-danger">Problemas: {componentData.orders.filter(order => order.status === OrderStatus.Error).length}</span>
+                            <div className="form-text">
+                                Período disponível: {getDateRangeText()}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -270,6 +292,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
                                         <input
                                             type="checkbox"
                                             className="form-check-input"
+                                            disabled={order.status !== OrderStatus.CanBeExported}
                                             checked={componentData.ordersSelectedToExport.includes(order.number)}
                                             onChange={() => handleOrderSelection(order.number)}
                                         />
@@ -277,7 +300,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
                                     <td>{renderStatusCell(order)}</td>
                                     <td>{order.number}</td>
                                     <td>{new Date(order.date).toLocaleDateString('pt-BR')}</td>
-                                    <td>{order.products.length}</td>
+                                    <td>{order.products.length == 0 ? '-' : order.products.length}</td>
                                     <td>{order.customer.name}</td>
                                     <td>{formatCurrency(order.totalPrice)}</td>
                                 </tr>
