@@ -44,6 +44,12 @@ const OrderDataExportDetailsModal: React.FC<OrderDataExportDetailsModalInput> = 
                         Pedido já foi exportado.
                     </div>
                 </>
+            case OrderStatus.StockEnouth:
+                return <>
+                    <div className="alert alert-success" role="alert">
+                        Pedido já possuí estoque suficiente para operações.
+                    </div>
+                </>
             case OrderStatus.Error:
                 return <>
                     <div className="alert alert-danger" role="alert">

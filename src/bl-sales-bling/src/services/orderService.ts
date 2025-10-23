@@ -75,7 +75,7 @@ export const getProducts = async (profile: string, key: string): Promise<Product
             return data.data.map((x: any) => {
                 let p: ProductInfo = {
                     code: x.codigo,
-                    description: x.descricaoCurta,
+                    description: x.nome,
                     id: x.id,
                     profile: profile,
                     stockQuantity: x.estoque?.saldoVirtualTotal,
@@ -132,14 +132,15 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
                             return;
                         }
 
-                        if (Array.isArray(data.itens) === false) {
+                        let itens = data.data.itens;
+                        if (Array.isArray(itens) === false) {
                             this.status = OrderStatus.Error;
                             this.errors.push('Produtos não encontrados.')
                             return;
                         }
 
                         let productsFailedToMatch: any = [];
-                        data.itens.forEach((item: any) => {
+                        itens.forEach((item: any) => {
                             let productFound = products.find(x => x.id === item.produto?.id);
 
                             if (!productFound) {
@@ -149,6 +150,14 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
                                 this.errors.push(`Produto ${item.descricao} não encontrado no Bling raiz.`);
                                 return;
                             }
+
+                            console.debug(`Checking product ${productFound.code} - Stock quantity: ${productFound.stockQuantity} | Order product quantity: ${item.quantidade}`)
+                            if (productFound.stockQuantity >= item.quantidade)
+                            {
+                                this.status = OrderStatus.StockEnouth
+                                return;
+                            }
+
                             let productFoundToExport = productsToExport.find(x => x.id === item.produto?.id);
 
                             if (!productFoundToExport) {

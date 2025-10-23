@@ -23,6 +23,7 @@ export enum OrderStatus {
   NotStartedYet,
   Loading,
   CanBeExported,
+  StockEnouth,
   Exported,
   Error,
 }

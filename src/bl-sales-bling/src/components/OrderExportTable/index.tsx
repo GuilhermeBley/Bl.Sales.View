@@ -153,6 +153,8 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
 
     const renderStatusCell = (order: OrderDataToExport) => {
         switch (order.status) {
+            case OrderStatus.StockEnouth:
+                return <span className="badge bg-success" title='O estoque da loja já é suficiente para este pedido.'>Estoque OK</span>;
             case OrderStatus.CanBeExported:
                 return <span className="badge bg-primary" title='Pronto para exportação.'>Processado</span>;
             case OrderStatus.NotStartedYet:
