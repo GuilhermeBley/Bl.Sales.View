@@ -3,6 +3,7 @@ import { OrderDataToExport, OrderStatus } from '../../model/OrderDataToExport';
 import { User } from '../../model/auth';
 import { getOrders, postTargetOrder } from '../../services/orderService';
 import LoadingComponent from '../LoadingComponent';
+import OrderDataExportDetailsModal from '../OrderDataExportDetailsModal';
 
 interface PageData {
     isSubmitting: boolean,
@@ -32,6 +33,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
         selectedDate: getDefaultDate(),
         isLoadingOrders: true
     });
+    const [modalSelectedOrder, setModalSelectedOrder] = useState<OrderDataToExport | undefined>(undefined);
 
     // Use useRef to track if data has been loaded
     const hasLoaded = useRef(false);
@@ -219,7 +221,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
     if (!user) return <></>;
 
     if (componentData.isLoadingOrders)
-        return <LoadingComponent/>
+        return <LoadingComponent />
 
     return (
         <div>
@@ -297,7 +299,11 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
                                             onChange={() => handleOrderSelection(order.number)}
                                         />
                                     </td>
-                                    <td>{renderStatusCell(order)}</td>
+                                    <td>
+                                        <a href="#" role="button" onClick={() => { setModalSelectedOrder(order) }}>
+                                            {renderStatusCell(order)}
+                                        </a>
+                                    </td>
                                     <td>{order.number}</td>
                                     <td>{new Date(order.date).toLocaleDateString('pt-BR')}</td>
                                     <td>{order.products.length == 0 ? '-' : order.products.length}</td>
@@ -330,6 +336,12 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
                         </>}
                 </div>
             </div>
+
+
+            <OrderDataExportDetailsModal 
+                order={modalSelectedOrder}
+                showModal={modalSelectedOrder !== undefined} 
+                onModalClose={() => setModalSelectedOrder(undefined)}/>
         </div>
     );
 }

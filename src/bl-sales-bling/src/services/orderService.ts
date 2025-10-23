@@ -110,6 +110,8 @@ const createOrderFromJson = (jsonOrder: any, profile :string, key: string): Orde
     profile: profile || 'Unknown',
     date: new Date(jsonOrder.data),
     products: [], // You can map products here if available in JSON
+    errors: [],
+    warnings: [],
     customer: {
       id: jsonOrder.contato?.id,
       name: jsonOrder.contato?.nome,

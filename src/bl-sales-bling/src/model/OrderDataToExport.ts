@@ -34,9 +34,11 @@ export interface OrderDataToExport {
   id: number,
   profile: string,
   date: Date, 
-  products: any[], 
+  products: any[],
   customer: any,
   totalPrice: number,
+  errors: string[],
+  warnings: string[]
 
   processStatus(availableProducts: ProductInfo[]) : Promise<void>;
 }
