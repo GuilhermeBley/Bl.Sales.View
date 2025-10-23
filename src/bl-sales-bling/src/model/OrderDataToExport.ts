@@ -29,16 +29,17 @@ export enum OrderStatus {
 
 export interface OrderDataToExport {
   status: OrderStatus,
-  statusMessage?: string,
   number: number,
   id: number,
   profile: string,
   date: Date, 
   products: any[],
+  productsToExport: any[],
   customer: any,
   totalPrice: number,
   errors: string[],
-  warnings: string[]
+  warnings: string[],
+  success: string[],
 
-  processStatus(availableProducts: ProductInfo[]) : Promise<void>;
+  processStatus(availableProducts: ProductInfo[], productsToExport: ProductInfo[]) : Promise<void>;
 }

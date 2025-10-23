@@ -6,7 +6,7 @@ interface PostOrderModel {
 
 }
 
-export const postTargetOrder = async (order : PostOrderModel) => {
+export const postTargetOrder = async (order: PostOrderModel) => {
     await new Promise(resolve => setTimeout(resolve, 1_000)); // fake loading
 
     console.log('Processing order.')
@@ -15,12 +15,11 @@ export const postTargetOrder = async (order : PostOrderModel) => {
     }
 }
 
-export const getOrders = async (profile: string, key: string, date: Date | undefined = undefined) : Promise<OrderDataToExport[]> => {
+export const getOrders = async (profile: string, key: string, date: Date | undefined = undefined): Promise<OrderDataToExport[]> => {
     let result = await api.get(`/api/profile/${profile}/order?accountSecret=${key}&initialDate=${date?.toISOString().split('T')[0]}`)
         .then(response => response.data)
         .then(data => {
-            if (Array.isArray(data.data) === false)
-            {
+            if (Array.isArray(data.data) === false) {
                 throw new Error("Failed to get data.");
             }
 
@@ -30,23 +29,22 @@ export const getOrders = async (profile: string, key: string, date: Date | undef
             console.error(error)
             return [];
         });
-    
+
     return result;
 }
 
-export const getCustomer = async (profile: string, key: string, documentNumber: string) : Promise<CustomerInfo | undefined> => {
+export const getCustomer = async (profile: string, key: string, documentNumber: string): Promise<CustomerInfo | undefined> => {
     let result = await api.get(`/api/profile/${profile}/product?accountSecret=${key}&documentNumber=${documentNumber}`)
         .then(response => response.data)
         .then(data => {
-            if (Array.isArray(data.data) === false)
-            {
+            if (Array.isArray(data.data) === false) {
                 throw new Error("Failed to get data.");
             }
 
             if (data.data.length === 0) return undefined;
 
             return data.data.map((x: any) => {
-                let p : CustomerInfo = {
+                let p: CustomerInfo = {
                     code: x.codigo,
                     documentNumber: x.numeroDocumento,
                     id: x.id,
@@ -62,21 +60,20 @@ export const getCustomer = async (profile: string, key: string, documentNumber: 
             console.error(error)
             return [];
         });
-    
+
     return result;
 }
 
-export const getProducts = async (profile: string, key: string) : Promise<ProductInfo[]> => {
-    let result = await api.get(`/api/profile/${profile}/customers?accountSecret=${key}`)
+export const getProducts = async (profile: string, key: string): Promise<ProductInfo[]> => {
+    let result = await api.get(`/api/profile/${profile}/product?accountSecret=${key}`)
         .then(response => response.data)
         .then(data => {
-            if (Array.isArray(data.data) === false)
-            {
+            if (Array.isArray(data.data) === false) {
                 throw new Error("Failed to get data.");
             }
 
             return data.data.map((x: any) => {
-                let p : ProductInfo = {
+                let p: ProductInfo = {
                     code: x.codigo,
                     description: x.descricaoCurta,
                     id: x.id,
@@ -92,84 +89,92 @@ export const getProducts = async (profile: string, key: string) : Promise<Produc
             console.error(error)
             return [];
         });
-    
+
     return result;
 }
 
 // Factory function to create OrderDataToExport instances
-const createOrderFromJson = (jsonOrder: any, profile :string, key: string): OrderDataToExport => {
-  
+const createOrderFromJson = (jsonOrder: any, profile: string, key: string): OrderDataToExport => {
+
     if (!jsonOrder)
         throw new Error('Invalid object.')
 
-  const order: OrderDataToExport = {
-    status: OrderStatus.NotStartedYet,
-    statusMessage: undefined,
-    number: jsonOrder.numero,
-    id: jsonOrder.id,
-    profile: profile || 'Unknown',
-    date: new Date(jsonOrder.data),
-    products: [], // You can map products here if available in JSON
-    errors: [],
-    warnings: [],
-    customer: {
-      id: jsonOrder.contato?.id,
-      name: jsonOrder.contato?.nome,
-      document: jsonOrder.contato?.numeroDocumento,
-      type: jsonOrder.contato?.tipoPessoa
-    },
-    totalPrice: jsonOrder.total || jsonOrder.totalProdutos,
-    // Implement the method directly
-    async processStatus(products: ProductInfo[]): Promise<void> {
-      try {
-        await api.get(`/api/profile/${profile}/order/${this.id}?accountSecret=${key}`)
-            .then(response => response.data)
-            .then(data => {
-                if (data.transferInfo)
-                {
-                    this.status = OrderStatus.Exported;
-                    this.statusMessage = 'Pedido já exportado.'
-                }
+    const order: OrderDataToExport = {
+        status: OrderStatus.NotStartedYet,
+        number: jsonOrder.numero,
+        id: jsonOrder.id,
+        profile: profile || 'Unknown',
+        date: new Date(jsonOrder.data),
+        productsToExport: [],
+        products: [], // You can map products here if available in JSON
+        errors: [],
+        warnings: [],
+        success: [],
+        customer: {
+            id: jsonOrder.contato?.id,
+            name: jsonOrder.contato?.nome,
+            document: jsonOrder.contato?.numeroDocumento,
+            type: jsonOrder.contato?.tipoPessoa
+        },
+        totalPrice: jsonOrder.total || jsonOrder.totalProdutos,
 
-                if (Array.isArray(data.itens) === false)
-                {
-                    this.status = OrderStatus.Error;
-                    this.statusMessage = 'Produtos não encontrados.'
-                    return;
-                }
-                
-                let productsFailedToMatch :any = [];
-                data.itens.forEach((item: any) => {
-                    let productFound = products.find(x => x.id === item.produto?.id);
+        // This method should check the follow scenarios
+        // - When the product stock is less than the order -> So it can be exported
+        // - If it was already uploaded, so the field 'data.transferInfo' will be not null
+        // 
+        async processStatus(products: ProductInfo[], productsToExport: ProductInfo[]): Promise<void> {
+            try {
+                await api.get(`/api/profile/${profile}/order/${this.id}?accountSecret=${key}`)
+                    .then(response => response.data)
+                    .then(data => {
+                        if (data.transferInfo) {
+                            this.status = OrderStatus.Exported;
+                            return;
+                        }
 
-                    if (!productFound)
-                    {
-                        productsFailedToMatch.push(item);
-                        return;
-                    }
+                        if (Array.isArray(data.itens) === false) {
+                            this.status = OrderStatus.Error;
+                            this.errors.push('Produtos não encontrados.')
+                            return;
+                        }
 
-                    this.products.push(productFound)
-                });
+                        let productsFailedToMatch: any = [];
+                        data.itens.forEach((item: any) => {
+                            let productFound = products.find(x => x.id === item.produto?.id);
 
-                if (productsFailedToMatch.length > 0)
-                {
-                    console.error('failed to match products.', productsFailedToMatch);
-                    this.status = OrderStatus.Error;
-                    this.statusMessage = 'Produtos não encontrados.'
-                }
-            })
-            .catch(error => {
+                            if (!productFound) {
+                                // very hard to happen this case, 
+                                // Bling ensures to have just orders with existent products
+                                productsFailedToMatch.push(item);
+                                this.errors.push(`Produto ${item.descricao} não encontrado no Bling raiz.`);
+                                return;
+                            }
+                            let productFoundToExport = productsToExport.find(x => x.id === item.produto?.id);
+
+                            if (!productFoundToExport) {
+                                productsFailedToMatch.push(item);
+                                this.errors.push(`Produto ${productFound.description}(${productFound.code}) não encontrado no Bling para exportação.`);
+                                return;
+                            }
+                            this.products.push(productFound)
+                        });
+
+                        if (productsFailedToMatch.length > 0) {
+                            console.error('failed to match products.', productsFailedToMatch);
+                            this.status = OrderStatus.Error;
+                        }
+                    })
+                    .catch(error => {
+                        console.error(`Failed to process order ${this.number}:`, error);
+                        this.status = OrderStatus.Error
+                    });
+            } catch (error) {
                 console.error(`Failed to process order ${this.number}:`, error);
                 this.status = OrderStatus.Error
-                this.statusMessage = 'Falha ao coletar dados de pedido.'
-            });
-      } catch (error) {
-        console.error(`Failed to process order ${this.number}:`, error);
-        this.status = OrderStatus.Error
-        this.statusMessage = 'Falha ao coletar dados de pedido.'
-      }
-    }
-  };
-  
-  return order;
+                this.errors.push(`Falha em processar pedido.`);
+            }
+        }
+    };
+
+    return order;
 };

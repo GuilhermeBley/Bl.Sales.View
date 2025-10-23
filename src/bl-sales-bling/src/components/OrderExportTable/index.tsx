@@ -1,16 +1,19 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { OrderDataToExport, OrderStatus } from '../../model/OrderDataToExport';
+import { useEffect, useState, useCallback, useRef, use } from 'react';
+import { OrderDataToExport, OrderStatus, ProductInfo } from '../../model/OrderDataToExport';
 import { User } from '../../model/auth';
-import { getOrders, postTargetOrder } from '../../services/orderService';
+import { getOrders, getProducts, postTargetOrder } from '../../services/orderService';
 import LoadingComponent from '../LoadingComponent';
 import OrderDataExportDetailsModal from '../OrderDataExportDetailsModal';
 
 interface PageData {
     isSubmitting: boolean,
     orders: OrderDataToExport[],
+    products: ProductInfo[],
+    productsToExport: ProductInfo[],
     ordersSelectedToExport: number[],
     selectedDate: Date,
-    isLoadingOrders: boolean
+    isLoadingOrders: boolean,
+    isValidatingData: boolean
 }
 
 interface InputPageData {
@@ -25,13 +28,16 @@ const getDefaultDate = () => {
     return threeDaysAgo;
 }
 
-const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
+const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
     const [componentData, setComponentData] = useState<PageData>({
         isSubmitting: false,
         orders: [],
+        products: [],
+        productsToExport: [],
         ordersSelectedToExport: [],
         selectedDate: getDefaultDate(),
-        isLoadingOrders: true
+        isLoadingOrders: true,
+        isValidatingData: false
     });
     const [modalSelectedOrder, setModalSelectedOrder] = useState<OrderDataToExport | undefined>(undefined);
 
@@ -50,7 +56,8 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
     }, [user]);
 
     const canSubmitOrders = useCallback(() => {
-        return componentData.ordersSelectedToExport.length > 0 &&
+        return componentData.isValidatingData === false &&
+            componentData.ordersSelectedToExport.length > 0 &&
             componentData.isSubmitting === false;
     }, [componentData.ordersSelectedToExport.length, componentData.isSubmitting]);
 
@@ -218,6 +225,69 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
         }
     }
 
+    const getAndSetSourceProducts = async () => {
+        setComponentData(p => ({
+            ...p,
+            products: []
+        }))
+
+        let products = await getProducts(user.profile, user.key);
+        setComponentData(p => ({
+            ...p,
+            products: products
+        }))
+    }
+
+    const getAndSetTargetProducts = async () => {
+        setComponentData(p => ({
+            ...p,
+            productsToExport: []
+        }))
+
+        let products = await getProducts(userToExport.profile, userToExport.key);
+        setComponentData(p => ({
+            ...p,
+            productsToExport: products
+        }))
+    }
+
+    const handleCheckAllOrders = async () => {
+
+        try {
+            setComponentData(p => ({
+                ...p,
+                isValidatingData: true
+            }))
+
+            await Promise.all([getAndSetSourceProducts(), getAndSetTargetProducts()]);
+
+            if (componentData.products.length === 0) {
+                // TODO: add error message here
+                console.error(`No one product were found for profile '${user.profile}'.`);
+                return;
+            }
+            if (componentData.productsToExport.length === 0) {
+                // TODO: add error message here
+                console.error(`No one product were found for profile '${userToExport.profile}'.`);
+                return;
+            }
+
+            for (let i = 0; i < componentData.orders.length; i++) {
+                let order = componentData.orders[i];
+                await order.processStatus(componentData.products, componentData.productsToExport);
+
+                setComponentData(p => ({ ...p, })) // updating screen
+            }
+        }
+        finally {
+
+            setComponentData(p => ({
+                ...p,
+                isValidatingData: false
+            }))
+        }
+    }
+
     // Early return after hooks
     if (!user) return <></>;
 
@@ -253,7 +323,8 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
                                     <button
                                         className="btn btn-outline-secondary"
                                         title="Atualizar lista"
-                                    >
+                                        onClick={handleCheckAllOrders}
+                                        disabled={componentData.isValidatingData}>
                                         <i className="fa-solid fa-rotate"></i> Validar Exportação
                                     </button>
                                 </div>
@@ -339,10 +410,10 @@ const OrderExportTable: React.FC<InputPageData> = ({ user }) => {
             </div>
 
 
-            <OrderDataExportDetailsModal 
+            <OrderDataExportDetailsModal
                 order={modalSelectedOrder}
-                showModal={modalSelectedOrder !== undefined} 
-                onModalClose={() => setModalSelectedOrder(undefined)}/>
+                showModal={modalSelectedOrder !== undefined}
+                onModalClose={() => setModalSelectedOrder(undefined)} />
         </div>
     );
 }

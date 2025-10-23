@@ -24,13 +24,19 @@ const OrderDataExportDetailsModal: React.FC<OrderDataExportDetailsModalInput> = 
         setShow(showModal)
     }, [showModal])
 
-    const getOrderAlert = (status: OrderStatus) => {
+    const getOrderAlert = (status: OrderStatus, messages: string[]) => {
+
+
         switch (status) {
             case OrderStatus.CanBeExported:
+                if (messages.length == 0) messages = ['Pedido pode ser exportado com sucesso!'];
                 return <>
-                    <div className="alert alert-success" role="alert">
-                        Pedido pode ser exportado com sucesso!
-                    </div>
+                    {messages.map((x, i) =>
+                         <div className="alert alert-success" role="alert" key={i}>
+                            {x}
+                        </div>
+                    )}
+                    
                 </>
             case OrderStatus.Exported:
                 return <>
@@ -91,11 +97,11 @@ const OrderDataExportDetailsModal: React.FC<OrderDataExportDetailsModalInput> = 
                     </>
                 }
                 
-                {getOrderAlert(order.status)}
+                {getOrderAlert(order.status, order.success)}
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="secondary" onClick={handleClose}>
-                    Close
+                    Fechar
                 </Button>
             </Modal.Footer>
         </Modal>
