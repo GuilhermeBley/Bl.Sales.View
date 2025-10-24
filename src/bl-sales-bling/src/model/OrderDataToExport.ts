@@ -7,6 +7,7 @@ export interface ProductInfo {
   value: number,
   description: string,
   stockQuantity: number,
+  original: any,
 }
 
 export interface CustomerInfo {
@@ -16,6 +17,7 @@ export interface CustomerInfo {
   code: string,
   documentNumber: string,
   phone: string,
+  original: any,
 }
 
 
@@ -41,6 +43,8 @@ export interface OrderDataToExport {
   errors: string[],
   warnings: string[],
   success: string[],
+  original: any,
 
   processStatus(availableProducts: ProductInfo[], productsToExport: ProductInfo[]) : Promise<void>;
+  resetStatus() : void;
 }

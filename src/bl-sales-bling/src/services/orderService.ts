@@ -1,4 +1,5 @@
 
+import { data } from 'react-router-dom';
 import { OrderDataToExport, OrderStatus, ProductInfo, CustomerInfo } from '../model/OrderDataToExport';
 import api from './apiService'
 
@@ -50,7 +51,8 @@ export const getCustomer = async (profile: string, key: string, documentNumber: 
                     id: x.id,
                     name: x.nome,
                     phone: x.telefone,
-                    profile: profile
+                    profile: profile,
+                    original: x
                 };
 
                 return p;
@@ -79,7 +81,8 @@ export const getProducts = async (profile: string, key: string): Promise<Product
                     id: x.id,
                     profile: profile,
                     stockQuantity: x.estoque?.saldoVirtualTotal,
-                    value: x.preco
+                    value: x.preco,
+                    original: x,
                 };
 
                 return p;
@@ -117,6 +120,14 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
             type: jsonOrder.contato?.tipoPessoa
         },
         totalPrice: jsonOrder.total || jsonOrder.totalProdutos,
+        original: jsonOrder,
+
+        resetStatus() {
+            this.status = OrderStatus.NotStartedYet;
+            this.errors = [];
+            this.warnings = [];
+            this.success = [];
+        },
 
         // This method should check the follow scenarios
         // - When the product stock is less than the order -> So it can be exported
@@ -152,8 +163,7 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
                             }
 
                             console.debug(`Checking product ${productFound.code} - Stock quantity: ${productFound.stockQuantity} | Order product quantity: ${item.quantidade}`)
-                            if (productFound.stockQuantity >= item.quantidade)
-                            {
+                            if (productFound.stockQuantity >= item.quantidade) {
                                 this.status = OrderStatus.StockEnouth
                                 return;
                             }
@@ -174,11 +184,11 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
                         }
                     })
                     .catch(error => {
-                        console.error(`Failed to process order ${this.number}:`, error);
+                        console.error(`Failed to process order ${this.number}, Id: ${this.id}:`, error);
                         this.status = OrderStatus.Error
                     });
             } catch (error) {
-                console.error(`Failed to process order ${this.number}:`, error);
+                console.error(`Failed to process order ${this.number}, Id: ${this.id}:`, error);
                 this.status = OrderStatus.Error
                 this.errors.push(`Falha em processar pedido.`);
             }
@@ -187,3 +197,52 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
 
     return order;
 };
+
+const createCustomer = async (customer: CustomerInfo, profile: string, key: string) => {
+    let result = await api.post(
+        `/api/profile/${profile}/customer/create?accountSecret=${key}`,
+        ({
+            nome: customer.original.nome || '',
+            codigo: customer.original.codigo || undefined,
+            situacao: "A",
+            numeroDocumento: customer.documentNumber || undefined,
+            telefone: customer.original.telefone || undefined,
+            celular: customer.original.celular || undefined,
+            fantasia: customer.original.fantasia || undefined,
+            tipo: customer.original.tipo || '',
+            indicadorIe: customer.original.indicadorIe || undefined,
+            ie: customer.original.ie || undefined,
+            rg: customer.original.rg || undefined,
+            inscricaoMunicipal: customer.original.inscricaoMunicipal || undefined,
+            orgaoEmissor: customer.original.orgaoEmissor || undefined,
+            email: customer.original.email || undefined,
+            emailNotaFiscal: customer.original.emailNotaFiscal || undefined,
+            endereco: customer.original.endereco || undefined,
+            vendedor: customer.original.vendedor || undefined,
+            dadosAdicionais: customer.original.dadosAdicionais || undefined,
+            financeiro: customer.original.financeiro || undefined,
+            pais: customer.original.pais || undefined,
+            tiposContato: customer.original.tiposContato || [],
+            pessoasContato: customer.original.pessoasContato || []
+        }))
+        .then(response => response.data)
+        .then(data => ({
+            success: true,
+            error: undefined,
+            data: data,
+        }))
+        .catch(error => {
+            console.error(error)
+            return ({
+                success: false,
+                error: `Falha ao criar/coletar cliente '${customer.documentNumber}'.`,
+                data: undefined,
+            });
+        });
+
+    return result;
+}
+
+const createOrder = async (order: OrderDataToExport, customer: CustomerInfo) => {
+    
+}

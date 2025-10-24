@@ -256,6 +256,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
     const handleCheckAllOrders = async () => {
 
         try {
+            componentData.orders.forEach(x => x.resetStatus())
             setComponentData(p => ({
                 ...p,
                 isValidatingData: true
