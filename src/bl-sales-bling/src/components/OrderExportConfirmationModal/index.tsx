@@ -33,10 +33,12 @@ const OrderExportConfirmationModal: React.FC<OrderExportConfirmationModalInput> 
         let postItems = orders
             .map(x => {
                 const postOrder: PostOrderModel = {
+                    sourceId: x.id,
                     customer: x.customer,
                     date: x.date,
+                    orderStoreNumber: x.orderStoreNumber,
                     orderNumber: x.number,
-                    original: x,
+                    original: x.original,
                     products: x.productsToExport,
                     profileSource: x.profile,
                     profileTarget: profileTarget,

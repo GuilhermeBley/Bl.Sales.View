@@ -140,11 +140,21 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
                     }
 
                     element.customer.original = customerFound.data;
-
-                    await postTargetOrder(element);
                     
                     console.debug('Processing item: ')
                     console.debug(element)
+
+                    let response =
+                        await postTargetOrder(element, userToExport.key);
+
+                    if (response.success === false)
+                    {
+                        console.error(response.data)
+                        itemToProcess.success.push(`Falha ao criar pedido. (${element.orderNumber})`)
+                        itemToProcess.status = OrderStatus.Error;
+                        setComponentData(p => ({ ...p }))
+                        return;
+                    }
 
                     itemToProcess.success.push('Pedido criado com sucesso.')
                     itemToProcess.status = OrderStatus.Exported;

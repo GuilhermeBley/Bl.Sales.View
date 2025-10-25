@@ -33,6 +33,7 @@ export enum OrderStatus {
 export interface OrderDataToExport {
   status: OrderStatus,
   number: number,
+  orderStoreNumber: string,
   id: number,
   profile: string,
   date: Date, 
