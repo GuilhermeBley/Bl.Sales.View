@@ -234,10 +234,8 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
         }))
 
         let products = await getProducts(user.profile, user.key);
-        setComponentData(p => ({
-            ...p,
-            products: products
-        }))
+        componentData.products.push(...products);
+        setComponentData(p => ({ ...p }))
     }
 
     const getAndSetTargetProducts = async () => {
@@ -247,10 +245,8 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
         }))
 
         let products = await getProducts(userToExport.profile, userToExport.key);
-        setComponentData(p => ({
-            ...p,
-            productsToExport: products
-        }))
+        componentData.productsToExport.push(...products)
+        setComponentData(p => ({ ...p }))
     }
 
     const handleCheckAllOrders = async () => {
