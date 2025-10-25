@@ -38,7 +38,7 @@ export interface OrderDataToExport {
   date: Date, 
   products: any[],
   productsToExport: any[],
-  customer: any,
+  customer: CustomerInfo,
   totalPrice: number,
   errors: string[],
   warnings: string[],

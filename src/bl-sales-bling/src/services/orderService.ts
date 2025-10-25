@@ -1,10 +1,16 @@
 
-import { data } from 'react-router-dom';
 import { OrderDataToExport, OrderStatus, ProductInfo, CustomerInfo } from '../model/OrderDataToExport';
 import api from './apiService'
 
-interface PostOrderModel {
-
+export interface PostOrderModel {
+    storeId?: number | undefined,
+    customer: CustomerInfo,
+    products: ProductInfo[],
+    orderNumber: number,
+    profileSource: string,
+    profileTarget: string,
+    date: Date,
+    original: any
 }
 
 export const postTargetOrder = async (order: PostOrderModel) => {
@@ -34,8 +40,8 @@ export const getOrders = async (profile: string, key: string, date: Date | undef
     return result;
 }
 
-export const getCustomer = async (profile: string, key: string, documentNumber: string): Promise<CustomerInfo | undefined> => {
-    let result = await api.get(`/api/profile/${profile}/product?accountSecret=${key}&documentNumber=${documentNumber}`)
+const getCustomer = async (profile: string, key: string, documentNumber: string): Promise<CustomerInfo | undefined> => {
+    let result = await api.get(`/api/profile/${profile}/customer?accountSecret=${key}&documentNumber=${documentNumber}`)
         .then(response => response.data)
         .then(data => {
             if (Array.isArray(data.data) === false) {
@@ -115,9 +121,12 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
         success: [],
         customer: {
             id: jsonOrder.contato?.id,
+            code: '',
             name: jsonOrder.contato?.nome,
-            document: jsonOrder.contato?.numeroDocumento,
-            type: jsonOrder.contato?.tipoPessoa
+            documentNumber: jsonOrder.contato?.numeroDocumento,
+            phone: '',
+            original: jsonOrder,
+            profile: profile
         },
         totalPrice: jsonOrder.total || jsonOrder.totalProdutos,
         original: jsonOrder,
@@ -151,7 +160,8 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
                         }
 
                         let productsFailedToMatch: any = [];
-                        itens.forEach((item: any) => {
+
+                        var productWithNoStock = itens.find((item: any) => {
                             let productFound = products.find(x => x.id === item.produto?.id);
 
                             if (!productFound) {
@@ -159,34 +169,57 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
                                 // Bling ensures to have just orders with existent products
                                 productsFailedToMatch.push(item);
                                 this.errors.push(`Produto ${item.descricao} não encontrado no Bling raiz.`);
-                                return;
+                                return false;
                             }
 
                             console.debug(`Checking product ${productFound.code} - Stock quantity: ${productFound.stockQuantity} | Order product quantity: ${item.quantidade}`)
                             if (productFound.stockQuantity >= item.quantidade) {
-                                this.status = OrderStatus.StockEnouth
-                                return;
+                                return false;
                             }
 
-                            let productFoundToExport = productsToExport.find(x => x.id === item.produto?.id);
-
-                            if (!productFoundToExport) {
-                                productsFailedToMatch.push(item);
-                                this.errors.push(`Produto ${productFound.description}(${productFound.code}) não encontrado no Bling para exportação.`);
-                                return;
-                            }
-                            this.products.push(productFound)
+                            return true;
                         });
 
                         if (productsFailedToMatch.length > 0) {
                             console.error('failed to match products.', productsFailedToMatch);
                             this.status = OrderStatus.Error;
+                            return;
                         }
+
+                        if (!productWithNoStock)
+                        {
+                            this.status = OrderStatus.StockEnouth
+                            return;
+                        }
+
+                        itens.forEach((item: any) => {
+
+                            let productFoundToExport = productsToExport.find(x => x.code === item.codigo);
+
+                            if (!productFoundToExport) {
+                                productsFailedToMatch.push(item);
+                                this.errors.push(`Produto ${item.descricao}(${item.codigo}) não encontrado no Bling para exportação. Realize o cadastro do mesmo.`);
+                                return;
+                            }
+                            this.products.push(item)
+                            this.productsToExport.push(productFoundToExport);
+                        });
+
+                        if (productsFailedToMatch.length > 0) {
+                            console.error('failed to match products.', productsFailedToMatch);
+                            this.status = OrderStatus.Error;
+                            return;
+                        }
+                        
+                        this.status = OrderStatus.CanBeExported;
                     })
                     .catch(error => {
                         console.error(`Failed to process order ${this.number}, Id: ${this.id}:`, error);
                         this.status = OrderStatus.Error
                     });
+                    
+                var data = await getCustomer(profile, key, this.customer.documentNumber);
+                if (data) this.customer = data;
             } catch (error) {
                 console.error(`Failed to process order ${this.number}, Id: ${this.id}:`, error);
                 this.status = OrderStatus.Error
@@ -198,7 +231,7 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
     return order;
 };
 
-const createCustomer = async (customer: CustomerInfo, profile: string, key: string) => {
+export const createCustomer = async (customer: CustomerInfo, profile: string, key: string) => {
     let result = await api.post(
         `/api/profile/${profile}/customer/create?accountSecret=${key}`,
         ({
@@ -229,7 +262,7 @@ const createCustomer = async (customer: CustomerInfo, profile: string, key: stri
         .then(data => ({
             success: true,
             error: undefined,
-            data: data,
+            data: data?.data,
         }))
         .catch(error => {
             console.error(error)
@@ -241,8 +274,4 @@ const createCustomer = async (customer: CustomerInfo, profile: string, key: stri
         });
 
     return result;
-}
-
-const createOrder = async (order: OrderDataToExport, customer: CustomerInfo) => {
-    
 }

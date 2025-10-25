@@ -39,10 +39,14 @@ const OrderDataExportDetailsModal: React.FC<OrderDataExportDetailsModalInput> = 
                     
                 </>
             case OrderStatus.Exported:
+                if (messages.length == 0) messages = ['Pedido já foi exportado anteriormente.'];
                 return <>
-                    <div className="alert alert-info" role="alert">
-                        Pedido já foi exportado.
-                    </div>
+                    {messages.map((x, i) =>
+                         <div className="alert alert-success" role="alert" key={i}>
+                            {x}
+                        </div>
+                    )}
+                    
                 </>
             case OrderStatus.StockEnouth:
                 return <>

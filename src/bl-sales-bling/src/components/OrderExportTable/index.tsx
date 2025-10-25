@@ -1,16 +1,17 @@
 import { useEffect, useState, useCallback, useRef, use } from 'react';
 import { OrderDataToExport, OrderStatus, ProductInfo } from '../../model/OrderDataToExport';
 import { User } from '../../model/auth';
-import { getOrders, getProducts, postTargetOrder } from '../../services/orderService';
+import { createCustomer, getOrders, getProducts, PostOrderModel, postTargetOrder } from '../../services/orderService';
 import LoadingComponent from '../LoadingComponent';
 import OrderDataExportDetailsModal from '../OrderDataExportDetailsModal';
+import OrderExportConfirmationModal from '../OrderExportConfirmationModal';
 
 interface PageData {
     isSubmitting: boolean,
     orders: OrderDataToExport[],
     products: ProductInfo[],
     productsToExport: ProductInfo[],
-    ordersSelectedToExport: number[],
+    ordersSelectedToExport: OrderDataToExport[],
     selectedDate: Date,
     isLoadingOrders: boolean,
     isValidatingData: boolean
@@ -40,6 +41,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
         isValidatingData: false
     });
     const [modalSelectedOrder, setModalSelectedOrder] = useState<OrderDataToExport | undefined>(undefined);
+    const [showExportModal, setShowExportModal] = useState(false);
 
     // Use useRef to track if data has been loaded
     const hasLoaded = useRef(false);
@@ -61,7 +63,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
             componentData.isSubmitting === false;
     }, [componentData.ordersSelectedToExport.length, componentData.isSubmitting]);
 
-    const setOrdersSelectedToExport = useCallback((ordersToExport: number[]) => {
+    const setOrdersSelectedToExport = useCallback((ordersToExport: OrderDataToExport[]) => {
         setComponentData(p => ({
             ...p,
             ordersSelectedToExport: ordersToExport
@@ -73,14 +75,14 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
         if (e.target.checked) {
             setOrdersSelectedToExport(componentData.orders
                 .filter(order => order.status === OrderStatus.CanBeExported)
-                .map(order => order.number));
+                .map(order => order));
         } else {
             setOrdersSelectedToExport([]);
         }
     }, [componentData.orders, setOrdersSelectedToExport]);
 
     // Memoize individual order selection
-    const handleOrderSelection = useCallback((orderNumber: number) => {
+    const handleOrderSelection = useCallback((orderNumber: OrderDataToExport) => {
         setComponentData(p => {
             const prev = p.ordersSelectedToExport;
             let newSelection;
@@ -97,44 +99,63 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
     }, []);
 
     // Handle export to Bling
-    const handleExportToBling = async () => {
-        if (componentData.ordersSelectedToExport.length === 0) {
+    const handleExportToBling = async (orders: PostOrderModel[]) => {
+        if (orders.length === 0) {
             alert('Por favor, selecione pelo menos um pedido para exportar.');
             return;
         }
-
-        const selectedOrders = componentData.orders.filter(order =>
-            componentData.ordersSelectedToExport.includes(order.number)
-        );
+        setShowExportModal(false);
 
         try {
+            let ordersToExportCopy = componentData.ordersSelectedToExport;
+
             setComponentData(p => ({
                 ...p,
+                ordersSelectedToExport: [],
                 isSubmitting: true
             }));
 
             // Process orders sequentially
-            for (let element of selectedOrders) {
-                if (element.status == OrderStatus.Exported) continue;
+            for (let element of orders) {
+                try
+                {
+                    let itemToProcess = ordersToExportCopy.find(x => x.number === element.orderNumber);
 
-                await postTargetOrder({
-                    // TODO: process items
-                });
+                    if (!itemToProcess)
+                    {
+                        // TODO: Handle errors here
+                        console.error(`Failed to find order to process: ${element.orderNumber}`)
+                        continue;
+                    }
 
-                // Update the order status in the local state
-                setComponentData(p => ({
-                    ...p,
-                    orders: p.orders.map(order =>
-                        order.number === element.number
-                            ? { ...order, status: OrderStatus.Exported }
-                            : order
-                    ),
-                    ordersSelectedToExport: p.ordersSelectedToExport.filter(x => x !== element.number)
-                }));
+                    let customerFound 
+                        = await createCustomer(element.customer, userToExport.profile, userToExport.key);
+
+                    if (!customerFound.success)
+                    {
+                        itemToProcess.errors.push(`Falha ao criar cliente ${element.customer.documentNumber}.`);
+                        itemToProcess.status = OrderStatus.Error;
+                        setComponentData(p => ({ ...p }))
+                        continue;
+                    }
+
+                    element.customer.original = customerFound.data;
+
+                    await postTargetOrder(element);
+                    
+                    console.debug('Processing item: ')
+                    console.debug(element)
+
+                    itemToProcess.success.push('Pedido criado com sucesso.')
+                    itemToProcess.status = OrderStatus.Exported;
+                    setComponentData(p => ({ ...p }))
+
+                }
+                catch (error) {
+                    // TODO: Handle errors here
+                    console.error(`Failed to proccess at: ${element.orderNumber}`, error)
+                }
             }
-        } catch (error) {
-            console.error('Export failed:', error);
-            alert('Erro ao exportar pedidos. Tente novamente.');
         } finally {
             setComponentData(p => ({
                 ...p,
@@ -156,7 +177,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
             case OrderStatus.StockEnouth:
                 return <span className="badge bg-success" title='O estoque da loja já é suficiente para este pedido.'>Estoque OK</span>;
             case OrderStatus.CanBeExported:
-                return <span className="badge bg-primary" title='Pronto para exportação.'>Processado</span>;
+                return <span className="badge bg-primary" title='Pronto para exportação.'>Exportação pronta</span>;
             case OrderStatus.NotStartedYet:
                 return <span className="badge bg-warning" title='Não verificado, clique no botão "Validar Exportação".'>Não Validado</span>;
             case OrderStatus.Loading:
@@ -345,7 +366,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
                                 <input
                                     type="checkbox"
                                     className="form-check-input"
-                                    checked={componentData.ordersSelectedToExport.length === componentData.orders.length && componentData.orders.length > 0}
+                                    checked={false}
                                     onChange={handleSelectAll}
                                 />
                             </th>
@@ -365,9 +386,9 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
                                         <input
                                             type="checkbox"
                                             className="form-check-input"
-                                            disabled={order.status !== OrderStatus.CanBeExported}
-                                            checked={componentData.ordersSelectedToExport.includes(order.number)}
-                                            onChange={() => handleOrderSelection(order.number)}
+                                            disabled={order.status !== OrderStatus.CanBeExported || componentData.isSubmitting}
+                                            checked={componentData.ordersSelectedToExport.includes(order)}
+                                            onChange={() => handleOrderSelection(order)}
                                         />
                                     </td>
                                     <td>
@@ -399,7 +420,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
                         : <>
                             <button
                                 className="btn btn-primary btn-lg"
-                                onClick={handleExportToBling}
+                                onClick={() => setShowExportModal(true)}
                                 disabled={!canSubmitOrders()}
                             >
                                 Exportar para o Bling ({componentData.ordersSelectedToExport.length})
@@ -413,6 +434,13 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
                 order={modalSelectedOrder}
                 showModal={modalSelectedOrder !== undefined}
                 onModalClose={() => setModalSelectedOrder(undefined)} />
+
+            <OrderExportConfirmationModal 
+                orders={componentData.ordersSelectedToExport}
+                profileTarget={userToExport.profile}
+                showModal={showExportModal}
+                onModalClose={() => setShowExportModal(false)}
+                onModalConfirmation={handleExportToBling}/>
         </div>
     );
 }
