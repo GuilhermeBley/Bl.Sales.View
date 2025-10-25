@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback, useRef, use } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { OrderDataToExport, OrderStatus, ProductInfo } from '../../model/OrderDataToExport';
 import { User } from '../../model/auth';
 import { createCustomer, getOrders, getProducts, PostOrderModel, postTargetOrder } from '../../services/orderService';
 import LoadingComponent from '../LoadingComponent';
 import OrderDataExportDetailsModal from '../OrderDataExportDetailsModal';
 import OrderExportConfirmationModal from '../OrderExportConfirmationModal';
+import AbsoluteLoadingComponent from '../AbsoluteLoadingComponent';
 
 interface PageData {
     isSubmitting: boolean,
@@ -117,22 +118,19 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
 
             // Process orders sequentially
             for (let element of orders) {
-                try
-                {
+                try {
                     let itemToProcess = ordersToExportCopy.find(x => x.number === element.orderNumber);
 
-                    if (!itemToProcess)
-                    {
+                    if (!itemToProcess) {
                         // TODO: Handle errors here
                         console.error(`Failed to find order to process: ${element.orderNumber}`)
                         continue;
                     }
 
-                    let customerFound 
+                    let customerFound
                         = await createCustomer(element.customer, userToExport.profile, userToExport.key);
 
-                    if (!customerFound.success)
-                    {
+                    if (!customerFound.success) {
                         itemToProcess.errors.push(`Falha ao criar cliente ${element.customer.documentNumber}.`);
                         itemToProcess.status = OrderStatus.Error;
                         setComponentData(p => ({ ...p }))
@@ -140,15 +138,14 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
                     }
 
                     element.customer.original = customerFound.data;
-                    
+
                     console.debug('Processing item: ')
                     console.debug(element)
 
                     let response =
                         await postTargetOrder(element, userToExport.key);
 
-                    if (response.success === false)
-                    {
+                    if (response.success === false) {
                         console.error(response.data)
                         itemToProcess.success.push(`Falha ao criar pedido. (${element.orderNumber})`)
                         itemToProcess.status = OrderStatus.Error;
@@ -368,54 +365,64 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
             </div>
 
             {/* Table Section */}
-            <div className="table-responsive overflow-auto" style={{ maxHeight: "60vh", height: "60vh" }}>
-                <table className="table table-striped table-hover">
-                    <thead className="table-dark">
-                        <tr>
-                            <th scope="col" style={{ width: '50px' }}>
-                                <input
-                                    type="checkbox"
-                                    className="form-check-input"
-                                    checked={false}
-                                    onChange={handleSelectAll}
-                                />
-                            </th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Número do Pedido</th>
-                            <th scope="col">Data do Pedido</th>
-                            <th scope="col">Quantidade de Produtos</th>
-                            <th scope="col">Nome do Cliente</th>
-                            <th scope="col">Valor</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {componentData.orders.map((order) => {
-                            return (
-                                <tr key={order.number}>
-                                    <td>
+            <div className="table-responsive overflow-auto" style={{ maxHeight: "55vh", height: "55vh" }}>
+                {componentData.isLoadingOrders
+                    ? <AbsoluteLoadingComponent />
+                    : componentData.orders.length === 0
+                        ? <>
+                            <div className="text-center py-5">
+                                <i className="bi bi-inbox fs-1 text-muted"></i>
+                                <p className="text-muted mt-3">Nenhum pedido encontrado</p>
+                            </div>
+                        </>
+                        : <table className="table table-striped table-hover">
+                            <thead className="table-dark">
+                                <tr>
+                                    <th scope="col" style={{ width: '50px' }}>
                                         <input
                                             type="checkbox"
                                             className="form-check-input"
-                                            disabled={order.status !== OrderStatus.CanBeExported || componentData.isSubmitting}
-                                            checked={componentData.ordersSelectedToExport.includes(order)}
-                                            onChange={() => handleOrderSelection(order)}
+                                            checked={false}
+                                            onChange={handleSelectAll}
                                         />
-                                    </td>
-                                    <td>
-                                        <a href="#" role="button" onClick={() => { setModalSelectedOrder(order) }}>
-                                            {renderStatusCell(order)}
-                                        </a>
-                                    </td>
-                                    <td>{order.number}</td>
-                                    <td>{new Date(order.date).toLocaleDateString('pt-BR')}</td>
-                                    <td>{order.products.length == 0 ? '-' : order.products.length}</td>
-                                    <td>{order.customer.name}</td>
-                                    <td>{formatCurrency(order.totalPrice)}</td>
+                                    </th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Número do Pedido</th>
+                                    <th scope="col">Data do Pedido</th>
+                                    <th scope="col">Quantidade de Produtos</th>
+                                    <th scope="col">Nome do Cliente</th>
+                                    <th scope="col">Valor</th>
                                 </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+                            </thead>
+                            <tbody>
+                                {componentData.orders.map((order) => {
+                                    return (
+                                        <tr key={order.number}>
+                                            <td>
+                                                <input
+                                                    type="checkbox"
+                                                    className="form-check-input"
+                                                    disabled={order.status !== OrderStatus.CanBeExported || componentData.isSubmitting}
+                                                    checked={componentData.ordersSelectedToExport.includes(order)}
+                                                    onChange={() => handleOrderSelection(order)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <a href="#" role="button" onClick={() => { setModalSelectedOrder(order) }}>
+                                                    {renderStatusCell(order)}
+                                                </a>
+                                            </td>
+                                            <td>{order.number}</td>
+                                            <td>{new Date(order.date).toLocaleDateString('pt-BR')}</td>
+                                            <td>{order.products.length == 0 ? '-' : order.products.length}</td>
+                                            <td>{order.customer.name}</td>
+                                            <td>{formatCurrency(order.totalPrice)}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                }
             </div>
 
             {/* Export Button */}
@@ -445,12 +452,12 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
                 showModal={modalSelectedOrder !== undefined}
                 onModalClose={() => setModalSelectedOrder(undefined)} />
 
-            <OrderExportConfirmationModal 
+            <OrderExportConfirmationModal
                 orders={componentData.ordersSelectedToExport}
                 profileTarget={userToExport.profile}
                 showModal={showExportModal}
                 onModalClose={() => setShowExportModal(false)}
-                onModalConfirmation={handleExportToBling}/>
+                onModalConfirmation={handleExportToBling} />
         </div>
     );
 }

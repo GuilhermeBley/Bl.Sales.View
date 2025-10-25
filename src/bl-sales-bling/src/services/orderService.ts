@@ -205,8 +205,14 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
         // - If it was already uploaded, so the field 'data.transferInfo' will be not null
         // 
         async processStatus(products: ProductInfo[], productsToExport: ProductInfo[]): Promise<void> {
+
+            if (products.length === 0 || productsToExport.length == 0) {
+                this.errors.push('Nenhum produto foi encontrado para a validação.')
+                return;
+            }
+
             try {
-                await api.get(`/api/profile/${profile}/order/${this.id}?accountSecret=${key}`)
+                await api.get(`/api/profile/${profile}/order/${this.id}?accountSecret=${key}&profileToCheck=${productsToExport[0].profile}`)
                     .then(response => response.data)
                     .then(data => {
                         if (data.transferInfo) {
