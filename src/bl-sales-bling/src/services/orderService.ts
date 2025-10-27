@@ -50,7 +50,7 @@ export const postTargetOrder = async (order: PostOrderModel, targetKey: string) 
                 unidade: item.original.unidade || undefined,
                 quantidade: item.original.quantidade || 0,
                 desconto: item.original.desconto || undefined,
-                valor: item.original.valor || 0,
+                valor: item.targetStoreValue ?? item.original.valor ?? 0,
                 aliquotaIPI: item.original.aliquotaIPI || undefined,
                 descricao: item.description || '',
                 descricaoDetalhada: undefined,
@@ -133,8 +133,12 @@ const getCustomer = async (profile: string, key: string, documentNumber: string)
     return result;
 }
 
-export const getProducts = async (profile: string, key: string): Promise<ProductInfo[]> => {
-    let result = await api.get(`/api/profile/${profile}/product?accountSecret=${key}`)
+export const getProducts = async (profile: string, key: string, storeId: string | undefined = undefined): Promise<ProductInfo[]> => {
+    let url = storeId
+        ? `/api/profile/${profile}/product?accountSecret=${key}&storeId=${storeId}`
+        : `/api/profile/${profile}/product?accountSecret=${key}`;
+    
+    let result = await api.get(url)
         .then(response => response.data)
         .then(data => {
             if (Array.isArray(data.data) === false) {
@@ -148,6 +152,7 @@ export const getProducts = async (profile: string, key: string): Promise<Product
                     id: x.id,
                     profile: profile,
                     stockQuantity: x.estoque?.saldoVirtualTotal,
+                    targetStoreValue: x.dadosLoja?.lojaPreco,
                     value: x.preco,
                     original: x,
                 };
@@ -177,6 +182,7 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
         profile: profile || 'Unknown',
         date: new Date(jsonOrder.data),
         productsToExport: [],
+        targetStoreTotalPrice: undefined,
         products: [], // You can map products here if available in JSON
         errors: [],
         warnings: [],

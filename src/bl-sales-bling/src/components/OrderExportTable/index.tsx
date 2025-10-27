@@ -272,7 +272,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
             productsToExport: []
         }))
 
-        let products = await getProducts(userToExport.profile, userToExport.key);
+        let products = await getProducts(userToExport.profile, userToExport.key, '205713904'/**TODO: ADD A FIELD TO STORE ID, USE 'api/profile/{profile}/store'  */);
         componentData.productsToExport.push(...products)
         setComponentData(p => ({ ...p }))
     }
