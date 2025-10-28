@@ -29,9 +29,11 @@ jobs:
           node-version: '18'
           
       - name: Install dependencies
+        working-directory: ./src/bl-sales-bling
         run: npm install
         
       - name: Build React Vite app
+        working-directory: ./src/bl-sales-bling
         run: npm run build
         
       - name: Deploy to Azure Static Web Apps
