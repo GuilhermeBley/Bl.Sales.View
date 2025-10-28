@@ -16,7 +16,8 @@ jobs:
     name: Build and Deploy Job
     env:
       CI: false
-      REACT_APP_API_BASE_URL: ${{ secrets.API_URL }}
+      VITE_API_URL: ${{ secrets.API_URL }}
+      REACT_APP_API_URL: ${{ secrets.API_URL }}
     steps:
       - uses: actions/checkout@v3
         with:
