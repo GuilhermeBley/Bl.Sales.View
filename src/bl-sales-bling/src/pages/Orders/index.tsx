@@ -47,12 +47,6 @@ const Orders: React.FC = () => {
             </div>
           </div>
         </div>
-
-        <div className="mt-6 bg-white p-4 rounded-lg shadow-md">
-          <p className="text-sm text-gray-600">
-            <strong>Authentication Token:</strong> {user?.token}
-          </p>
-        </div>
       </div>
     </div>
   );
