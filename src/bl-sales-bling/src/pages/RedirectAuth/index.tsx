@@ -12,7 +12,7 @@ interface QueryParams {
 const RedirectAuth: React.FC = () => {
     const navigate = useNavigate();
     const { login, logout } = useAuth();
-    const { setExportConfig, loginExportAccount, logoutExportAccount } = useAuthExportAccount();
+    const { setExportConfig, loginExportAccount, loginAndConfigurExportAccount, logoutExportAccount } = useAuthExportAccount();
 
     useEffect(() => {
 
@@ -64,7 +64,7 @@ const RedirectAuth: React.FC = () => {
 
             if (!exportStatusId && !exportStatusId) return;
 
-            setExportConfig(exportStoreId, exportStatusId);
+            loginAndConfigurExportAccount(profileExport, profileExportKey, exportStoreId, exportStatusId);
         }
         finally {
             navigate('/');
