@@ -439,7 +439,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
                             <button
                                 className="btn btn-primary btn-lg"
                                 onClick={() => setShowExportModal(true)}
-                                disabled={false} /** TODO: !canSubmitOrders() */
+                                disabled={!canSubmitOrders()}
                             >
                                 Exportar para o Bling ({componentData.ordersSelectedToExport.length})
                             </button>
