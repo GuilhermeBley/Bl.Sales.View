@@ -6,6 +6,7 @@ import LoadingComponent from '../LoadingComponent';
 import OrderDataExportDetailsModal from '../OrderDataExportDetailsModal';
 import OrderExportConfirmationModal from '../OrderExportConfirmationModal';
 import AbsoluteLoadingComponent from '../AbsoluteLoadingComponent';
+import { getSituacoes, getStores } from './service';
 
 interface PageData {
     isSubmitting: boolean,
@@ -438,7 +439,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
                             <button
                                 className="btn btn-primary btn-lg"
                                 onClick={() => setShowExportModal(true)}
-                                disabled={!canSubmitOrders()}
+                                disabled={false} /** TODO: !canSubmitOrders() */
                             >
                                 Exportar para o Bling ({componentData.ordersSelectedToExport.length})
                             </button>
@@ -457,7 +458,9 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
                 profileTarget={userToExport.profile}
                 showModal={showExportModal}
                 onModalClose={() => setShowExportModal(false)}
-                onModalConfirmation={handleExportToBling} />
+                onModalConfirmation={handleExportToBling} 
+                loadSituacoes={() => getStores(userToExport.profile, userToExport.key)}
+                loadStores={() => getSituacoes(userToExport.profile, userToExport.key)}/>
         </div>
     );
 }
