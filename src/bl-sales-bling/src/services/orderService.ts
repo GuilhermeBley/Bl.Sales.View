@@ -5,6 +5,7 @@ import api from './apiService'
 export interface PostOrderModel {
     sourceId: number,
     storeId?: number | undefined,
+    situacaoId?: number | undefined,
     customer: CustomerInfo,
     products: ProductInfo[],
     orderNumber: number,
@@ -32,8 +33,12 @@ export const postTargetOrder = async (order: PostOrderModel, targetKey: string) 
                 numeroDocumento: order.customer.original.numeroDocumento,
                 nome: order.customer.original.nome,
             },
-            situacao: undefined, // set as default
-            loja: order.storeId 
+            situacao: order.situacaoId && order.situacaoId > 0
+                ? {
+                    id: order.situacaoId
+                }
+                : undefined,
+            loja: order.storeId && order.storeId > 0
                 ? {
                     id: order.storeId
                 }

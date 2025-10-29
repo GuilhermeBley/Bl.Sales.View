@@ -27,7 +27,6 @@ const OrderExportConfirmationModal: React.FC<OrderExportConfirmationModalInput> 
 }) => {
 
     const [show, setShow] = useState(false);
-    const [storeNumber, setStoreNumber] = useState<number | undefined>(undefined);
     const { config, setExportConfig } = useAuthExportAccount();
 
     const handleClose = () => {
@@ -50,7 +49,8 @@ const OrderExportConfirmationModal: React.FC<OrderExportConfirmationModalInput> 
                     products: x.productsToExport,
                     profileSource: x.profile,
                     profileTarget: profileTarget,
-                    storeId: storeNumber
+                    storeId: config.defaultStoreId,
+                    situacaoId: config.defaultSituacaoId
                 };
 
                 return postOrder;
