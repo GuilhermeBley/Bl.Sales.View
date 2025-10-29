@@ -58,7 +58,8 @@ export const AuthProviderExportAccount: React.FC<AuthProviderProps> = ({ childre
 
   const logoutExportAccount = (): void => {
     // Remove token from localStorage
-    localStorage.removeItem('userToken');
+    localStorageManager.remove();
+    setConfig({ defaultSituacaoId: undefined, defaultStoreId: undefined })
     setUser(null);
   };
 

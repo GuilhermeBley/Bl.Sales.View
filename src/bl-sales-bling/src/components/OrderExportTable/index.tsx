@@ -459,8 +459,8 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
                 showModal={showExportModal}
                 onModalClose={() => setShowExportModal(false)}
                 onModalConfirmation={handleExportToBling} 
-                loadSituacoes={() => getStores(userToExport.profile, userToExport.key)}
-                loadStores={() => getSituacoes(userToExport.profile, userToExport.key)}/>
+                loadSituacoes={() => getSituacoes(userToExport.profile, userToExport.key)}
+                loadStores={() => getStores(userToExport.profile, userToExport.key)}/>
         </div>
     );
 }
