@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { OrderDataToExport } from '../../model/OrderDataToExport';
 import { Modal, Button } from 'react-bootstrap';
 import { PostOrderModel } from '../../services/orderService';
+import { useAuthExportAccount } from '../../context/AuthExportAccountContext';
+import LazySelect, { SelectOption } from '../LazySelect';
 
 interface OrderExportConfirmationModalInput {
     orders: OrderDataToExport[],
@@ -9,18 +11,23 @@ interface OrderExportConfirmationModalInput {
     profileTarget: string,
     onModalClose?: () => void,
     onModalConfirmation?: (orders: PostOrderModel[]) => Promise<void>
+    loadStores?: () => Promise<SelectOption[]>,
+    loadSituacoes?: () => Promise<SelectOption[]>,
 }
 
 
-const OrderExportConfirmationModal: React.FC<OrderExportConfirmationModalInput> = ({ 
-    orders, 
+const OrderExportConfirmationModal: React.FC<OrderExportConfirmationModalInput> = ({
+    orders,
     showModal,
     profileTarget,
     onModalClose,
-    onModalConfirmation }) => {
+    onModalConfirmation,
+    loadStores,
+    loadSituacoes,
+}) => {
 
     const [show, setShow] = useState(false);
-    const [storeNumber, setStoreNumber] = useState<number | undefined>(undefined);
+    const { config, setExportConfig } = useAuthExportAccount();
 
     const handleClose = () => {
         setShow(false);
@@ -29,7 +36,7 @@ const OrderExportConfirmationModal: React.FC<OrderExportConfirmationModalInput> 
     const handleShow = () => setShow(true);
 
     const handleConfirm = async () => {
-        
+
         let postItems = orders
             .map(x => {
                 const postOrder: PostOrderModel = {
@@ -42,12 +49,13 @@ const OrderExportConfirmationModal: React.FC<OrderExportConfirmationModalInput> 
                     products: x.productsToExport,
                     profileSource: x.profile,
                     profileTarget: profileTarget,
-                    storeId: storeNumber
+                    storeId: config.defaultStoreId,
+                    situacaoId: config.defaultSituacaoId
                 };
 
                 return postOrder;
             });
-        
+
         if (onModalConfirmation) await onModalConfirmation(postItems);
     }
 
@@ -56,25 +64,45 @@ const OrderExportConfirmationModal: React.FC<OrderExportConfirmationModalInput> 
         setShow(showModal)
     }, [showModal])
 
-    if (orders.length == 0) return <></>
-
     return (
         <Modal show={show} onHide={handleClose}>
             <Modal.Header closeButton>
                 <Modal.Title>Confirmação de exportação</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                Confirmação de exportação de {orders.length} pedidos.
+                <p>Confirmação de exportação de {orders.length} pedidos.</p>
 
                 <div className="mb-3">
-                    <label className="form-label">Número da loja</label>
-                    <input 
-                        type="number" 
-                        className="form-control" 
-                        id="storeNumber" 
-                        placeholder="123"
-                        value={storeNumber}
-                        onChange={(e) => setStoreNumber(parseInt(e.target.value))}/>
+                    {loadStores
+                        ? 
+                        <div className="mb-3">
+                            <label className="form-label">Loja padrão</label>
+                            
+                            <LazySelect
+                                loadOptions={loadStores}
+                                value={config.defaultStoreId}
+                                onChange={(n) => setExportConfig(typeof n === 'number' ? n : undefined, config.defaultSituacaoId)}
+                                placeholder="Clique para carregar as lojas..."
+                                />
+                        </div>
+                        : <></>
+                    }
+
+                    {loadSituacoes
+                        ? 
+                        <div className="mb-3">
+                            <label className="form-label">Situação padrão</label>
+                            
+                            <LazySelect
+                                loadOptions={loadSituacoes}
+                                value={config.defaultSituacaoId}
+                                onChange={(n) => setExportConfig(config.defaultStoreId, typeof n === 'number' ? n : undefined)}
+                                placeholder="Clique para carregar as lojas..."
+                                />
+                        </div>
+                        : <></>
+                    }
+                    
                 </div>
             </Modal.Body>
             <Modal.Footer>
