@@ -56,6 +56,19 @@ export const AuthProviderExportAccount: React.FC<AuthProviderProps> = ({ childre
     setConfig(conf)
   }
 
+  const loginAndConfigurExportAccount = (profile: string, key: string,storeId: number | undefined, situacaoId: number | undefined) => {
+    
+    let user: User = { profile, key };
+    localStorageManager.set({ user, config })
+    setUser(user);
+    let conf: OrderExportConfig = { 
+      defaultSituacaoId: situacaoId,
+      defaultStoreId: storeId
+    };
+    localStorageManager.set({ user: user, config: conf })
+    setConfig(conf)
+  }
+
   const logoutExportAccount = (): void => {
     // Remove token from localStorage
     localStorageManager.remove();
@@ -65,6 +78,7 @@ export const AuthProviderExportAccount: React.FC<AuthProviderProps> = ({ childre
 
   const value: AuthContextExportAccountType = {
     userExportAccount,
+    loginAndConfigurExportAccount,
     loginExportAccount,
     logoutExportAccount,
     setExportConfig,
