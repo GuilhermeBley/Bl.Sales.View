@@ -7,6 +7,7 @@ import OrderDataExportDetailsModal from '../OrderDataExportDetailsModal';
 import OrderExportConfirmationModal from '../OrderExportConfirmationModal';
 import AbsoluteLoadingComponent from '../AbsoluteLoadingComponent';
 import { getSituacoes, getStores } from './service';
+import { OrderExportConfig } from '../../model/OrderExportConfig';
 
 interface PageData {
     isSubmitting: boolean,
@@ -22,6 +23,7 @@ interface PageData {
 interface InputPageData {
     user: User,
     userToExport: User,
+    exportConfig: OrderExportConfig
 }
 
 const getDefaultDate = () => {
@@ -31,7 +33,7 @@ const getDefaultDate = () => {
     return threeDaysAgo;
 }
 
-const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
+const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportConfig }) => {
     const [componentData, setComponentData] = useState<PageData>({
         isSubmitting: false,
         orders: [],
@@ -262,7 +264,8 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
             products: []
         }))
 
-        let products = await getProducts(user.profile, user.key);
+        const nutylacStockId = 14888569106; /** TODO: do a modal to configure this const */
+        let products = await getProducts(user.profile, user.key, undefined, nutylacStockId);
         componentData.products.push(...products);
         setComponentData(p => ({ ...p }))
     }
@@ -273,7 +276,10 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
             productsToExport: []
         }))
 
-        let products = await getProducts(userToExport.profile, userToExport.key, '205713904'/**TODO: ADD A FIELD TO STORE ID, USE 'api/profile/{profile}/store'  */);
+        let products = await getProducts(
+            userToExport.profile, 
+            userToExport.key, 
+            exportConfig.defaultStoreId?.toString());
         componentData.productsToExport.push(...products)
         setComponentData(p => ({ ...p }))
     }

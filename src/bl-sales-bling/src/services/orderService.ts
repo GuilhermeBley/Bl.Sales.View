@@ -138,10 +138,14 @@ const getCustomer = async (profile: string, key: string, documentNumber: string)
     return result;
 }
 
-export const getProducts = async (profile: string, key: string, storeId: string | undefined = undefined): Promise<ProductInfo[]> => {
-    let url = storeId
-        ? `/api/profile/${profile}/product?accountSecret=${key}&storeId=${storeId}`
-        : `/api/profile/${profile}/product?accountSecret=${key}`;
+export const getProducts = async (
+    profile: string, 
+    key: string, 
+    storeId: string | undefined = undefined,
+    stockId: number | undefined = undefined): Promise<ProductInfo[]> => {
+    let url = `/api/profile/${profile}/product?accountSecret=${key}`;
+    if (storeId) url += `&storeId=${storeId}`;
+    if (stockId && stockId > 0) url += `&filtroSaldoEstoqueDeposito=${stockId}`;
     
     let result = await api.get(url)
         .then(response => response.data)
