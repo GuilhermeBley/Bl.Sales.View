@@ -196,6 +196,7 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
         errors: [],
         warnings: [],
         success: [],
+        finalValue: undefined,
         customer: {
             id: jsonOrder.contato?.id,
             code: '',
@@ -275,6 +276,7 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
                             return;
                         }
 
+                        let finalValue = 0;
                         itens.forEach((item: any) => {
 
                             let productFoundToExport = productsToExport.find(x => x.code === item.codigo);
@@ -286,6 +288,7 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
                             }
                             this.products.push(item);
                             productFoundToExport.original = item;
+                            finalValue += item.quantidade * (productFoundToExport.targetStoreValue ?? productFoundToExport.value);
                             this.productsToExport.push(productFoundToExport);
                         });
 
@@ -295,6 +298,7 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
                             return;
                         }
                         
+                        this.finalValue = finalValue;
                         this.status = OrderStatus.CanBeExported;
                     })
                     .catch(error => {

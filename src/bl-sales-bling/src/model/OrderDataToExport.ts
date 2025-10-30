@@ -42,6 +42,7 @@ export interface OrderDataToExport {
   productsToExport: ProductInfo[],
   customer: CustomerInfo,
   totalPrice: number,
+  finalValue: number | undefined,
   targetStoreTotalPrice: number | undefined,
   errors: string[],
   warnings: string[],

@@ -399,6 +399,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                                     <th scope="col">Quantidade de Produtos</th>
                                     <th scope="col">Nome do Cliente</th>
                                     <th scope="col">Valor</th>
+                                    <th scope="col" title='Valor calculado após validação. Normalmente alterado quando uma loja atribuí um valor distinto para o produto.'>Valor Final</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -421,9 +422,14 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                                             </td>
                                             <td>{order.number}</td>
                                             <td>{new Date(order.date).toLocaleDateString('pt-BR')}</td>
-                                            <td>{order.products.length == 0 ? '-' : order.products.length}</td>
+                                            <td>
+                                                <span title={order.productsToExport.map(x => `${x.code} - ${x.description}`).join('\n')}>
+                                                    {order.products.length == 0 ? '-' : order.products.length}
+                                                </span>
+                                            </td>
                                             <td>{order.customer.name}</td>
                                             <td>{formatCurrency(order.totalPrice)}</td>
+                                            <td>{order.finalValue ? formatCurrency(order.finalValue) : '-'}</td>
                                         </tr>
                                     );
                                 })}
