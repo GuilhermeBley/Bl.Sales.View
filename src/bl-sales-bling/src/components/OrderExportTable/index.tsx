@@ -7,6 +7,7 @@ import OrderDataExportDetailsModal from '../OrderDataExportDetailsModal';
 import OrderExportConfirmationModal from '../OrderExportConfirmationModal';
 import AbsoluteLoadingComponent from '../AbsoluteLoadingComponent';
 import { getSituacoes, getStores } from './service';
+import { OrderExportConfig } from '../../model/OrderExportConfig';
 
 interface PageData {
     isSubmitting: boolean,
@@ -22,6 +23,7 @@ interface PageData {
 interface InputPageData {
     user: User,
     userToExport: User,
+    exportConfig: OrderExportConfig
 }
 
 const getDefaultDate = () => {
@@ -31,7 +33,7 @@ const getDefaultDate = () => {
     return threeDaysAgo;
 }
 
-const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
+const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportConfig }) => {
     const [componentData, setComponentData] = useState<PageData>({
         isSubmitting: false,
         orders: [],
@@ -262,7 +264,8 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
             products: []
         }))
 
-        let products = await getProducts(user.profile, user.key);
+        const nutylacStockId = 14888569106; /** TODO: do a modal to configure this const */
+        let products = await getProducts(user.profile, user.key, undefined, nutylacStockId);
         componentData.products.push(...products);
         setComponentData(p => ({ ...p }))
     }
@@ -273,7 +276,10 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
             productsToExport: []
         }))
 
-        let products = await getProducts(userToExport.profile, userToExport.key, '205713904'/**TODO: ADD A FIELD TO STORE ID, USE 'api/profile/{profile}/store'  */);
+        let products = await getProducts(
+            userToExport.profile, 
+            userToExport.key, 
+            exportConfig.defaultStoreId?.toString());
         componentData.productsToExport.push(...products)
         setComponentData(p => ({ ...p }))
     }
@@ -393,6 +399,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
                                     <th scope="col">Quantidade de Produtos</th>
                                     <th scope="col">Nome do Cliente</th>
                                     <th scope="col">Valor</th>
+                                    <th scope="col" title='Valor calculado após validação. Normalmente alterado quando uma loja atribuí um valor distinto para o produto.'>Valor Final</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -415,9 +422,14 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport }) => {
                                             </td>
                                             <td>{order.number}</td>
                                             <td>{new Date(order.date).toLocaleDateString('pt-BR')}</td>
-                                            <td>{order.products.length == 0 ? '-' : order.products.length}</td>
+                                            <td>
+                                                <span title={order.productsToExport.map(x => `${x.code} - ${x.description}`).join('\n')}>
+                                                    {order.products.length == 0 ? '-' : order.products.length}
+                                                </span>
+                                            </td>
                                             <td>{order.customer.name}</td>
                                             <td>{formatCurrency(order.totalPrice)}</td>
+                                            <td>{order.finalValue ? formatCurrency(order.finalValue) : '-'}</td>
                                         </tr>
                                     );
                                 })}

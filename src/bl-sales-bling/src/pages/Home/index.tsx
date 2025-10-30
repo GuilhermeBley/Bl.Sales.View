@@ -11,7 +11,7 @@ interface PageData {
 
 const Home: React.FC = () => {
   const { user } = useAuth();
-  const { userExportAccount } = useAuthExportAccount();
+  const { userExportAccount, config } = useAuthExportAccount();
 
   const [pageData, setPageData] = useState<PageData>({
     isLoaded: false
@@ -45,7 +45,7 @@ const Home: React.FC = () => {
             {/* Orders Table */}
             <div className="card">
               <div className="card-body">
-                <OrderExportTable key={user.profile} user={user} userToExport={userExportAccount} />
+                <OrderExportTable key={user.profile} user={user} userToExport={userExportAccount} exportConfig={config} />
               </div>
             </div>
           </>
