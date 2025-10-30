@@ -41,6 +41,7 @@ const RedirectAuth: React.FC = () => {
             let profileExportKey = params["profileExportKey"]
             let exportStoreId: number | undefined = parseInt(params["exportStoreId"])
             let exportStatusId: number | undefined = parseInt(params["exportStatusId"])
+            let customerCnpj: string | undefined = params["customerCnpj"]
 
             console.log({
                 profile,
@@ -64,7 +65,12 @@ const RedirectAuth: React.FC = () => {
 
             if (!exportStatusId && !exportStatusId) return;
 
-            loginAndConfigurExportAccount(profileExport, profileExportKey, exportStoreId, exportStatusId);
+            loginAndConfigurExportAccount(
+                profileExport, 
+                profileExportKey, 
+                exportStoreId, 
+                exportStatusId, 
+                customerCnpj && customerCnpj.length == 14 ? customerCnpj : undefined);
         }
         finally {
             navigate('/');

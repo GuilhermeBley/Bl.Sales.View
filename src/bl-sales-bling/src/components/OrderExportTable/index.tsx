@@ -6,8 +6,9 @@ import LoadingComponent from '../LoadingComponent';
 import OrderDataExportDetailsModal from '../OrderDataExportDetailsModal';
 import OrderExportConfirmationModal from '../OrderExportConfirmationModal';
 import AbsoluteLoadingComponent from '../AbsoluteLoadingComponent';
-import { getSituacoes, getStores } from './service';
+import { getCompanies, getSituacoes, getStores } from './service';
 import { OrderExportConfig } from '../../model/OrderExportConfig';
+import OrderExportConfigModal from '../OrderExportConfigModal';
 
 interface PageData {
     isSubmitting: boolean,
@@ -46,6 +47,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
     });
     const [modalSelectedOrder, setModalSelectedOrder] = useState<OrderDataToExport | undefined>(undefined);
     const [showExportModal, setShowExportModal] = useState(false);
+    const [showExportConfigModal, setShowExportConfigModal] = useState(false);
 
     // Use useRef to track if data has been loaded
     const hasLoaded = useRef(false);
@@ -277,8 +279,8 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
         }))
 
         let products = await getProducts(
-            userToExport.profile, 
-            userToExport.key, 
+            userToExport.profile,
+            userToExport.key,
             exportConfig.defaultStoreId?.toString());
         componentData.productsToExport.push(...products)
         setComponentData(p => ({ ...p }))
@@ -328,6 +330,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
     if (componentData.isLoadingOrders)
         return <LoadingComponent />
 
+    const isDevelopment = process.env.NODE_ENV === 'development';
     return (
         <div>
             {/* Header Section */}
@@ -341,6 +344,18 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                                 Selecionados: {componentData.ordersSelectedToExport.length} |
                                 Disponível para exportação: {componentData.orders.filter(order => order.status === OrderStatus.CanBeExported).length}
                             </p>
+
+                            {isDevelopment
+                                ? <>
+                                    <button
+                                        className="btn btn-outline-secondary"
+                                        title="Atualizar lista"
+                                        onClick={() => setShowExportConfigModal(true)}>
+                                        <i className="bi bi-gear-fill"></i>
+                                    </button>
+                                </>
+                                : <></>}
+
                         </div>
                         <div className="col-md-6 text-md-end">
                             <div className="input-group" role="group">
@@ -470,9 +485,18 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                 profileTarget={userToExport.profile}
                 showModal={showExportModal}
                 onModalClose={() => setShowExportModal(false)}
-                onModalConfirmation={handleExportToBling} 
+                onModalConfirmation={handleExportToBling}
+            />
+
+
+            <OrderExportConfigModal
+                targetProfile={userToExport.profile}
+                showModal={showExportConfigModal}
+                onModalClose={() => setShowExportConfigModal(false)}
                 loadSituacoes={() => getSituacoes(userToExport.profile, userToExport.key)}
-                loadStores={() => getStores(userToExport.profile, userToExport.key)}/>
+                loadStores={() => getStores(userToExport.profile, userToExport.key)}
+                loadCompanies={() => getCompanies(userToExport.profile, userToExport.key)}
+            />
         </div>
     );
 }
