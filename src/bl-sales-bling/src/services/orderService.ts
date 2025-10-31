@@ -197,6 +197,7 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
         warnings: [],
         success: [],
         finalValue: undefined,
+        defaultCustomer: undefined,
         customer: {
             id: jsonOrder.contato?.id,
             code: '',
@@ -214,6 +215,10 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
             this.errors = [];
             this.warnings = [];
             this.success = [];
+            this.products = [];
+            this.defaultCustomer = undefined;
+            this.finalValue = undefined;
+            this.productsToExport = [];
         },
 
         // This method should check the follow scenarios
@@ -311,10 +316,15 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
                         this.status = OrderStatus.Error
                     });
                     
-                var data = defaultCustomer 
-                    ? defaultCustomer
-                    : await getCustomer(profile, key, this.customer.documentNumber);
-                if (data) this.customer = data;
+                if (this.status === OrderStatus.CanBeExported)
+                {
+                    console.log('setting customer.');
+                    var data = defaultCustomer 
+                        ? defaultCustomer // avoiding loading unecessary data
+                        : await getCustomer(profile, key, this.customer.documentNumber);
+                    if (defaultCustomer) this.defaultCustomer = defaultCustomer;
+                    else if (data) this.customer = data;
+                }
             } catch (error) {
                 console.error(`Failed to process order ${this.number}, Id: ${this.id}:`, error);
                 this.status = OrderStatus.Error

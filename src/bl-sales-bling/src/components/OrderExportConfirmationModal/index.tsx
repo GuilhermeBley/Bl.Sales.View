@@ -35,13 +35,14 @@ const OrderExportConfirmationModal: React.FC<OrderExportConfirmationModalInput> 
         let invalidCustomersOrders = orders
             .filter(x => {
                 if (config.staticCustomerCnpj
-                    && x.customer.documentNumber != config.staticCustomerCnpj)
+                    && x.defaultCustomer?.documentNumber != config.staticCustomerCnpj)
                 {
                     x.status = OrderStatus.Error;
                     x.errors.push(`Cliente padrão ${config.staticCustomerCnpj} não foi colocado para o pedido.`);
                     console.error(`Invaldi default customer CNPJ ${config.staticCustomerCnpj} for order ${x.id}.`);
                     return true;
                 }
+                x.defaultCustomer = undefined;
                 return false;
             });
 
@@ -55,7 +56,7 @@ const OrderExportConfirmationModal: React.FC<OrderExportConfirmationModalInput> 
 
                 const postOrder: PostOrderModel = {
                     sourceId: x.id,
-                    customer: x.customer,
+                    customer: x.defaultCustomer ?? x.customer,
                     date: x.date,
                     orderStoreNumber: x.orderStoreNumber,
                     orderNumber: x.number,

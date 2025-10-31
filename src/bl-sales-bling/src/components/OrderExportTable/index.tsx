@@ -150,7 +150,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
 
                         element.customer.original = customerFound.data;
                     }
-                    
+
                     console.debug('Processing item: ')
                     console.debug(element)
 
@@ -344,12 +344,13 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                 console.error(`No one product were found for profile '${userToExport.profile}'.`);
                 return;
             }
-            
+
             console.log('Default customer: ' + defaultCustomer?.documentNumber)
             for (let i = 0; i < componentData.orders.length; i++) {
                 let order = componentData.orders[i];
+                order.resetStatus();
                 await order.processStatus(
-                    componentData.products, 
+                    componentData.products,
                     componentData.productsToExport,
                     defaultCustomer);
 
@@ -483,7 +484,14 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                                                     {order.products.length == 0 ? '-' : order.products.length}
                                                 </span>
                                             </td>
-                                            <td>{order.customer.name}</td>
+                                            <td>
+                                                {order.customer.name}{order.defaultCustomer
+                                                    ? <>
+                                                        <i className="bi bi-three-dots" title={`Cnpj para exportação: ${order.defaultCustomer.documentNumber}`}></i>
+                                                    </>
+                                                    : <>
+                                                    </>}
+                                            </td>
                                             <td>{formatCurrency(order.totalPrice)}</td>
                                             <td>{order.finalValue ? formatCurrency(order.finalValue) : '-'}</td>
                                         </tr>
