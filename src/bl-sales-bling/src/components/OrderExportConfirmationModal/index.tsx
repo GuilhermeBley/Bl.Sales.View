@@ -40,7 +40,9 @@ const OrderExportConfirmationModal: React.FC<OrderExportConfirmationModalInput> 
                     x.status = OrderStatus.Error;
                     x.errors.push(`Cliente padrão ${config.staticCustomerCnpj} não foi colocado para o pedido.`);
                     console.error(`Invaldi default customer CNPJ ${config.staticCustomerCnpj} for order ${x.id}.`);
+                    return true;
                 }
+                return false;
             });
 
         if (invalidCustomersOrders.length > 0) {

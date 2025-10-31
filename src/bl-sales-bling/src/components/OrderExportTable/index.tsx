@@ -258,6 +258,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
             setComponentData(p => ({
                 ...p,
                 orders: orders,
+                ordersSelectedToExport: [],
                 isLoadingOrders: false
             }));
         } catch (error) {
@@ -299,9 +300,10 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
 
         try {
             let customer =
-                await getCustomer(userToExport.key, userToExport.profile, exportConfig.staticCustomerCnpj);
+                await getCustomer(userToExport.profile, userToExport.key, exportConfig.staticCustomerCnpj);
 
             if (customer) {
+                console.log('Default customer set: ' + customer.id)
                 setDefaultCustomer(customer);
                 return true;
             }
@@ -342,13 +344,14 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                 console.error(`No one product were found for profile '${userToExport.profile}'.`);
                 return;
             }
-
+            
+            console.log('Default customer: ' + defaultCustomer?.documentNumber)
             for (let i = 0; i < componentData.orders.length; i++) {
                 let order = componentData.orders[i];
                 await order.processStatus(
                     componentData.products, 
                     componentData.productsToExport,
-                    defaultCustomerRef.current);
+                    defaultCustomer);
 
                 setComponentData(p => ({ ...p, })) // updating screen
             }

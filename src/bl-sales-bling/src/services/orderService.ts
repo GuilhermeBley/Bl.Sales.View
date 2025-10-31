@@ -311,7 +311,9 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
                         this.status = OrderStatus.Error
                     });
                     
-                var data = await getCustomer(profile, key, this.customer.documentNumber);
+                var data = defaultCustomer 
+                    ? defaultCustomer
+                    : await getCustomer(profile, key, this.customer.documentNumber);
                 if (data) this.customer = data;
             } catch (error) {
                 console.error(`Failed to process order ${this.number}, Id: ${this.id}:`, error);
