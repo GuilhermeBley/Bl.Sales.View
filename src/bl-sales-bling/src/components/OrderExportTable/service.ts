@@ -22,16 +22,16 @@ export const getSituacoes = async (profile: string, key: string): Promise<Select
 }
 
 export const getStores = async (profile: string, key: string): Promise<SelectOption[]> => {
-    let result = await api.get(`/api/profile/${profile}/store?accountSecret=${key}`)
+    let result = await api.get(`/api/profile/${profile}/order-status?accountSecret=${key}`)
         .then(response => response.data)
         .then(data => {
-            if (Array.isArray(data.data) === false) {
+            if (Array.isArray(data) === false) {
                 throw new Error("Failed to get data.");
             }
 
-            return data.data
-                .filter((x: any) => x)
-                .map((x: any) => createOrderStore(x));
+            return data
+                .filter(x => x)
+                .map((x: any) => createOrderSituacao(x));
         })
         .catch(error => {
             console.error(error)
@@ -39,6 +39,19 @@ export const getStores = async (profile: string, key: string): Promise<SelectOpt
         });
 
     return result;
+}
+
+export const getCompanies = async (profile: string, key: string): Promise<SelectOption[]> => {
+    // TODO: list companies
+
+    await Promise.resolve();
+
+    let opt : SelectOption = {
+        label: 'NUTYLAC DISTRIBUIDORA E INSUMOS LTDA',
+        value: '63113338000170',
+    };
+
+    return [opt]
 }
 
 const createOrderSituacao = (x: any): SelectOption => {

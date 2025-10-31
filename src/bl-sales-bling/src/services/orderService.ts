@@ -106,7 +106,7 @@ export const getOrders = async (profile: string, key: string, date: Date | undef
     return result;
 }
 
-const getCustomer = async (profile: string, key: string, documentNumber: string): Promise<CustomerInfo | undefined> => {
+export const getCustomer = async (profile: string, key: string, documentNumber: string): Promise<CustomerInfo | undefined> => {
     let result = await api.get(`/api/profile/${profile}/customer?accountSecret=${key}&documentNumber=${documentNumber}`)
         .then(response => response.data)
         .then(data => {
@@ -220,7 +220,11 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
         // - When the product stock is less than the order -> So it can be exported
         // - If it was already uploaded, so the field 'data.transferInfo' will be not null
         // 
-        async processStatus(products: ProductInfo[], productsToExport: ProductInfo[]): Promise<void> {
+        async processStatus(
+            products: ProductInfo[], 
+            productsToExport: ProductInfo[], 
+            defaultCustomer: CustomerInfo | undefined): Promise<void> 
+        {
 
             if (products.length === 0 || productsToExport.length == 0) {
                 this.errors.push('Nenhum produto foi encontrado para a validação.')
@@ -298,6 +302,7 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
                             return;
                         }
                         
+                        if (defaultCustomer) this.customer = defaultCustomer;
                         this.finalValue = finalValue;
                         this.status = OrderStatus.CanBeExported;
                     })
@@ -306,7 +311,9 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
                         this.status = OrderStatus.Error
                     });
                     
-                var data = await getCustomer(profile, key, this.customer.documentNumber);
+                var data = defaultCustomer 
+                    ? defaultCustomer
+                    : await getCustomer(profile, key, this.customer.documentNumber);
                 if (data) this.customer = data;
             } catch (error) {
                 console.error(`Failed to process order ${this.number}, Id: ${this.id}:`, error);

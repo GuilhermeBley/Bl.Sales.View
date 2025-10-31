@@ -25,7 +25,11 @@ export const useAuthExportAccount = (): AuthContextExportAccountType => {
 
 export const AuthProviderExportAccount: React.FC<AuthProviderProps> = ({ children }) => {
   const [userExportAccount, setUser] = useState<User | null>(null);
-  const [config, setConfig] = useState<OrderExportConfig>({ defaultSituacaoId: undefined, defaultStoreId: undefined });
+  const [config, setConfig] = useState<OrderExportConfig>({ 
+    defaultSituacaoId: undefined, 
+    defaultStoreId: undefined,
+    staticCustomerCnpj: undefined,
+  });
   const [loading, setLoading] = useState<boolean>(true);
   const localStorageManager = new LocalStorageManager<LocalStoreDataModel>('user-settings-export-account');
 
@@ -47,23 +51,35 @@ export const AuthProviderExportAccount: React.FC<AuthProviderProps> = ({ childre
     setUser(user);
   };
 
-  const setExportConfig = (storeId: number | undefined, situacaoId: number | undefined): void => {
+  const setExportConfig = (
+    storeId: number | undefined, 
+    situacaoId: number | undefined, 
+    staticCustomerCnpj: string | undefined
+  ): void => {
     let conf: OrderExportConfig = { 
       defaultSituacaoId: situacaoId,
-      defaultStoreId: storeId
+      defaultStoreId: storeId,
+      staticCustomerCnpj: staticCustomerCnpj
     };
     localStorageManager.set({ user: userExportAccount ?? undefined, config: conf })
     setConfig(conf)
   }
 
-  const loginAndConfigurExportAccount = (profile: string, key: string,storeId: number | undefined, situacaoId: number | undefined) => {
+  const loginAndConfigurExportAccount = (
+    profile: string, 
+    key: string,
+    storeId: number | undefined, 
+    situacaoId: number | undefined, 
+    staticCustomerCnpj: string | undefined
+  ) => {
     
     let user: User = { profile, key };
     localStorageManager.set({ user, config })
     setUser(user);
     let conf: OrderExportConfig = { 
       defaultSituacaoId: situacaoId,
-      defaultStoreId: storeId
+      defaultStoreId: storeId,
+      staticCustomerCnpj: staticCustomerCnpj,
     };
     localStorageManager.set({ user: user, config: conf })
     setConfig(conf)
@@ -72,7 +88,7 @@ export const AuthProviderExportAccount: React.FC<AuthProviderProps> = ({ childre
   const logoutExportAccount = (): void => {
     // Remove token from localStorage
     localStorageManager.remove();
-    setConfig({ defaultSituacaoId: undefined, defaultStoreId: undefined })
+    setConfig({ defaultSituacaoId: undefined, defaultStoreId: undefined, staticCustomerCnpj: undefined })
     setUser(null);
   };
 

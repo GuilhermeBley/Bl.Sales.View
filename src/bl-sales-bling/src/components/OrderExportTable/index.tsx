@@ -1,13 +1,14 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { OrderDataToExport, OrderStatus, ProductInfo } from '../../model/OrderDataToExport';
+import { CustomerInfo, OrderDataToExport, OrderStatus, ProductInfo } from '../../model/OrderDataToExport';
 import { User } from '../../model/auth';
-import { createCustomer, getOrders, getProducts, PostOrderModel, postTargetOrder } from '../../services/orderService';
+import { createCustomer, getOrders, getProducts, PostOrderModel, postTargetOrder, getCustomer } from '../../services/orderService';
 import LoadingComponent from '../LoadingComponent';
 import OrderDataExportDetailsModal from '../OrderDataExportDetailsModal';
 import OrderExportConfirmationModal from '../OrderExportConfirmationModal';
 import AbsoluteLoadingComponent from '../AbsoluteLoadingComponent';
-import { getSituacoes, getStores } from './service';
+import { getCompanies, getSituacoes, getStores } from './service';
 import { OrderExportConfig } from '../../model/OrderExportConfig';
+import OrderExportConfigModal from '../OrderExportConfigModal';
 
 interface PageData {
     isSubmitting: boolean,
@@ -46,6 +47,9 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
     });
     const [modalSelectedOrder, setModalSelectedOrder] = useState<OrderDataToExport | undefined>(undefined);
     const [showExportModal, setShowExportModal] = useState(false);
+    const [showExportConfigModal, setShowExportConfigModal] = useState(false);
+    const [defaultCustomer, setDefaultCustomer] = useState<CustomerInfo | undefined>(undefined);
+    const defaultCustomerRef = useRef(defaultCustomer);
 
     // Use useRef to track if data has been loaded
     const hasLoaded = useRef(false);
@@ -130,23 +134,27 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                         continue;
                     }
 
-                    let customerFound
-                        = await createCustomer(element.customer, userToExport.profile, userToExport.key);
+                    if (!exportConfig.staticCustomerCnpj) {
+                        //
+                        // Try to create the customer if it wasn't set a default one.
+                        //
+                        let customerFound
+                            = await createCustomer(element.customer, userToExport.profile, userToExport.key);
 
-                    if (!customerFound.success) {
-                        itemToProcess.errors.push(`Falha ao criar cliente ${element.customer.documentNumber}.`);
-                        itemToProcess.status = OrderStatus.Error;
-                        setComponentData(p => ({ ...p }))
-                        continue;
+                        if (!customerFound.success) {
+                            itemToProcess.errors.push(`Falha ao criar cliente ${element.customer.documentNumber}.`);
+                            itemToProcess.status = OrderStatus.Error;
+                            setComponentData(p => ({ ...p }))
+                            continue;
+                        }
+
+                        element.customer.original = customerFound.data;
                     }
-
-                    element.customer.original = customerFound.data;
-
+                    
                     console.debug('Processing item: ')
                     console.debug(element)
 
-                    let response =
-                        await postTargetOrder(element, userToExport.key);
+                    let response = await postTargetOrder(element, userToExport.key);
 
                     if (response.success === false) {
                         console.error(response.data)
@@ -250,6 +258,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
             setComponentData(p => ({
                 ...p,
                 orders: orders,
+                ordersSelectedToExport: [],
                 isLoadingOrders: false
             }));
         } catch (error) {
@@ -268,6 +277,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
         let products = await getProducts(user.profile, user.key, undefined, nutylacStockId);
         componentData.products.push(...products);
         setComponentData(p => ({ ...p }))
+        return true;
     }
 
     const getAndSetTargetProducts = async () => {
@@ -277,11 +287,31 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
         }))
 
         let products = await getProducts(
-            userToExport.profile, 
-            userToExport.key, 
+            userToExport.profile,
+            userToExport.key,
             exportConfig.defaultStoreId?.toString());
         componentData.productsToExport.push(...products)
         setComponentData(p => ({ ...p }))
+        return true;
+    }
+
+    const getAndSetDefaultCustomer = async () => {
+        if (!exportConfig.staticCustomerCnpj) return true;
+
+        try {
+            let customer =
+                await getCustomer(userToExport.profile, userToExport.key, exportConfig.staticCustomerCnpj);
+
+            if (customer) {
+                console.log('Default customer set: ' + customer.id)
+                setDefaultCustomer(customer);
+                return true;
+            }
+        } catch {
+            console.error(`Failed to get `)
+        }
+
+        return false;
     }
 
     const handleCheckAllOrders = async () => {
@@ -293,7 +323,16 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                 isValidatingData: true
             }))
 
-            await Promise.all([getAndSetSourceProducts(), getAndSetTargetProducts()]);
+            let results =
+                await Promise.all([getAndSetSourceProducts(), getAndSetTargetProducts(), getAndSetDefaultCustomer()]);
+
+            if (results[2] === false) {
+                componentData.orders.forEach(element => {
+                    element.status = OrderStatus.Error;
+                    element.errors.push(`Falha ao coletar cliente padrão '${exportConfig.staticCustomerCnpj}'.`);
+                });
+                return;
+            }
 
             if (componentData.products.length === 0) {
                 // TODO: add error message here
@@ -305,10 +344,14 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                 console.error(`No one product were found for profile '${userToExport.profile}'.`);
                 return;
             }
-
+            
+            console.log('Default customer: ' + defaultCustomer?.documentNumber)
             for (let i = 0; i < componentData.orders.length; i++) {
                 let order = componentData.orders[i];
-                await order.processStatus(componentData.products, componentData.productsToExport);
+                await order.processStatus(
+                    componentData.products, 
+                    componentData.productsToExport,
+                    defaultCustomer);
 
                 setComponentData(p => ({ ...p, })) // updating screen
             }
@@ -328,6 +371,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
     if (componentData.isLoadingOrders)
         return <LoadingComponent />
 
+    const isDevelopment = process.env.NODE_ENV === 'development';
     return (
         <div>
             {/* Header Section */}
@@ -341,6 +385,18 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                                 Selecionados: {componentData.ordersSelectedToExport.length} |
                                 Disponível para exportação: {componentData.orders.filter(order => order.status === OrderStatus.CanBeExported).length}
                             </p>
+
+                            {isDevelopment
+                                ? <>
+                                    <button
+                                        className="btn btn-outline-secondary"
+                                        title="Atualizar lista"
+                                        onClick={() => setShowExportConfigModal(true)}>
+                                        <i className="bi bi-gear-fill"></i>
+                                    </button>
+                                </>
+                                : <></>}
+
                         </div>
                         <div className="col-md-6 text-md-end">
                             <div className="input-group" role="group">
@@ -470,9 +526,18 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                 profileTarget={userToExport.profile}
                 showModal={showExportModal}
                 onModalClose={() => setShowExportModal(false)}
-                onModalConfirmation={handleExportToBling} 
+                onModalConfirmation={handleExportToBling}
+            />
+
+
+            <OrderExportConfigModal
+                targetProfile={userToExport.profile}
+                showModal={showExportConfigModal}
+                onModalClose={() => setShowExportConfigModal(false)}
                 loadSituacoes={() => getSituacoes(userToExport.profile, userToExport.key)}
-                loadStores={() => getStores(userToExport.profile, userToExport.key)}/>
+                loadStores={() => getStores(userToExport.profile, userToExport.key)}
+                loadCompanies={() => getCompanies(userToExport.profile, userToExport.key)}
+            />
         </div>
     );
 }
