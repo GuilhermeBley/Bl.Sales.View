@@ -230,7 +230,6 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
             productsToExport: ProductInfo[], 
             defaultCustomer: CustomerInfo | undefined): Promise<void> 
         {
-
             if (products.length === 0 || productsToExport.length == 0) {
                 this.errors.push('Nenhum produto foi encontrado para a validação.')
                 return;
@@ -318,7 +317,7 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
                     
                 if (this.status === OrderStatus.CanBeExported)
                 {
-                    console.log('setting customer.');
+                    console.log(`setting customer: ${this.customer.documentNumber} and default: ${defaultCustomer?.documentNumber}.`);
                     var data = defaultCustomer 
                         ? defaultCustomer // avoiding loading unecessary data
                         : await getCustomer(profile, key, this.customer.documentNumber);

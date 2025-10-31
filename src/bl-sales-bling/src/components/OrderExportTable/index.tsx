@@ -296,7 +296,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
     }
 
     const getAndSetDefaultCustomer = async () => {
-        if (!exportConfig.staticCustomerCnpj) return true;
+        if (!exportConfig.staticCustomerCnpj) return { success: true, customer: undefined };
 
         try {
             let customer =
@@ -305,13 +305,13 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
             if (customer) {
                 console.log('Default customer set: ' + customer.id)
                 setDefaultCustomer(customer);
-                return true;
+                return { success: true, customer };
             }
-        } catch {
-            console.error(`Failed to get `)
+        } catch(error) {
+            console.error(`Failed to get `, error)
         }
 
-        return false;
+        return { success: false, customer: undefined };
     }
 
     const handleCheckAllOrders = async () => {
@@ -326,7 +326,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
             let results =
                 await Promise.all([getAndSetSourceProducts(), getAndSetTargetProducts(), getAndSetDefaultCustomer()]);
 
-            if (results[2] === false) {
+            if (results[2].success === false) {
                 componentData.orders.forEach(element => {
                     element.status = OrderStatus.Error;
                     element.errors.push(`Falha ao coletar cliente padrão '${exportConfig.staticCustomerCnpj}'.`);
@@ -345,14 +345,15 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                 return;
             }
 
-            console.log('Default customer: ' + defaultCustomer?.documentNumber)
+            let dcustomer = results[2].customer;
+            console.log('Default customer: ' + dcustomer?.documentNumber)
             for (let i = 0; i < componentData.orders.length; i++) {
                 let order = componentData.orders[i];
                 order.resetStatus();
                 await order.processStatus(
                     componentData.products,
                     componentData.productsToExport,
-                    defaultCustomer);
+                    dcustomer);
 
                 setComponentData(p => ({ ...p, })) // updating screen
             }

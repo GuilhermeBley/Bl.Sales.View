@@ -81,6 +81,8 @@ export const AuthProviderExportAccount: React.FC<AuthProviderProps> = ({ childre
       defaultStoreId: storeId,
       staticCustomerCnpj: staticCustomerCnpj,
     };
+    console.log('Loged into ')
+    console.log(conf)
     localStorageManager.set({ user: user, config: conf })
     setConfig(conf)
   }
