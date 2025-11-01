@@ -198,6 +198,8 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
         success: [],
         finalValue: undefined,
         defaultCustomer: undefined,
+        exportedOrderCode: undefined,
+        exportedOrderId: undefined,
         customer: {
             id: jsonOrder.contato?.id,
             code: '',
@@ -219,6 +221,8 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
             this.defaultCustomer = undefined;
             this.finalValue = undefined;
             this.productsToExport = [];
+            this.exportedOrderCode = undefined;
+            this.exportedOrderId = undefined;
         },
 
         // This method should check the follow scenarios
@@ -241,6 +245,8 @@ const createOrderFromJson = (jsonOrder: any, profile: string, key: string): Orde
                     .then(data => {
                         if (data.transferInfo) {
                             this.status = OrderStatus.Exported;
+                            this.exportedOrderId = data.transferInfo.targetOrderId;
+
                             return;
                         }
 
@@ -379,3 +385,22 @@ export const createCustomer = async (customer: CustomerInfo, profile: string, ke
 
     return result;
 }
+
+export const getOrderById = (
+    profile: string, 
+    key: string,
+    id: number) => {
+        return api.get(`/api/profile/${profile}/order/${id}?accountSecret=${key}`)
+            .then(response => ({
+                success: true,
+                data: response.data?.data
+            }))
+            .catch(error => {
+                console.error('Failed to get order id ' + id, error);
+                return {
+                    success: false,
+                    data: undefined,
+                }
+            })
+
+    }
