@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { CustomerInfo, OrderDataToExport, OrderStatus, ProductInfo } from '../../model/OrderDataToExport';
 import { User } from '../../model/auth';
-import { createCustomer, getOrders, getProducts, PostOrderModel, postTargetOrder, getCustomer } from '../../services/orderService';
+import { createCustomer, getOrders, getProducts, PostOrderModel, postTargetOrder, getCustomer, getOrderById } from '../../services/orderService';
 import LoadingComponent from '../LoadingComponent';
 import OrderDataExportDetailsModal from '../OrderDataExportDetailsModal';
 import OrderExportConfirmationModal from '../OrderExportConfirmationModal';
@@ -354,6 +354,25 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                     componentData.products,
                     componentData.productsToExport,
                     dcustomer);
+                
+                if (order.exportedOrderId) {
+                    
+                    try {
+                        let result = await getOrderById(
+                            userToExport.profile,
+                            userToExport.key,
+                            order.exportedOrderId
+                        )
+                        
+                        if (typeof result.data.numero === 'number'){
+                            
+                            order.exportedOrderCode = result.data.numero;   
+                            
+                        }
+                    } catch {
+
+                    }
+                }
 
                 setComponentData(p => ({ ...p, })) // updating screen
             }
@@ -478,7 +497,11 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                                                     {renderStatusCell(order)}
                                                 </a>
                                             </td>
-                                            <td>{order.number}</td>
+                                            <td>
+                                                {order.exportedOrderCode
+                                                ? `${order.number} / ${order.exportedOrderCode}`
+                                                : order.number}
+                                            </td>
                                             <td>{new Date(order.date).toLocaleDateString('pt-BR')}</td>
                                             <td>
                                                 <span title={order.productsToExport.map(x => `${x.code} - ${x.description}`).join('\n')}>

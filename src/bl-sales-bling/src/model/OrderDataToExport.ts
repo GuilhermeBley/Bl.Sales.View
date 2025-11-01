@@ -50,6 +50,9 @@ export interface OrderDataToExport {
   success: string[],
   original: any,
 
+  exportedOrderId: number | undefined,
+  exportedOrderCode: string | undefined,
+
   processStatus(availableProducts: ProductInfo[], productsToExport: ProductInfo[], defaultCustomer: CustomerInfo | undefined) : Promise<void>;
   resetStatus() : void;
 }
