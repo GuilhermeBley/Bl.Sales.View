@@ -16,6 +16,42 @@ export interface PostOrderModel {
     original: any
 }
 
+export const patchStatus = async (profile: string, key: string, orderId: number, situacaoId: number) => {
+    let result = await api.patch(`/api/profile/${profile}/order/${orderId}/situacao/${situacaoId}?accountSecret=${key}`)
+        .then(response => response.status === 200)
+        .catch(error => {
+            console.error(error)
+            return false;
+        });
+
+    return result;
+}
+
+export const getProfileConfig = async (profile: string, key: string) => {
+    let defaultResult = {
+        defaultStatusAfterExporting: undefined,
+    };
+
+    let result = await api.get(`/api/profile/${profile}/profile-config?accountSecret=${key}`)
+        .then(response => response.data)
+        .then(data => {
+            if (data.data) {
+                let d = data.data;
+                return {
+                    defaultStatusAfterExporting: d.defaultStatusAfterExporting,
+                }
+            }
+
+            return defaultResult;
+        })
+        .catch(error => {
+            console.error(error)
+            return defaultResult;
+        });
+
+    return result;
+}
+
 export const postTargetOrder = async (order: PostOrderModel, targetKey: string) => {
     let result = await api.post(
         `/api/profile/${order.profileTarget}/order?accountSecret=${targetKey}`,

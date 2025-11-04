@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { CustomerInfo, OrderDataToExport, OrderStatus, ProductInfo } from '../../model/OrderDataToExport';
 import { User } from '../../model/auth';
-import { createCustomer, getOrders, getProducts, PostOrderModel, postTargetOrder, getCustomer, getOrderById } from '../../services/orderService';
+import { createCustomer, getOrders, getProducts, PostOrderModel, postTargetOrder, getCustomer, getOrderById, getProfileConfig, patchStatus } from '../../services/orderService';
 import LoadingComponent from '../LoadingComponent';
 import OrderDataExportDetailsModal from '../OrderDataExportDetailsModal';
 import OrderExportConfirmationModal from '../OrderExportConfirmationModal';
@@ -49,6 +49,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
     const [showExportModal, setShowExportModal] = useState(false);
     const [showExportConfigModal, setShowExportConfigModal] = useState(false);
     const [defaultCustomer, setDefaultCustomer] = useState<CustomerInfo | undefined>(undefined);
+    const [profileConfig, setProfileConfig] = useState<any | undefined>(undefined);
     const defaultCustomerRef = useRef(defaultCustomer);
 
     // Use useRef to track if data has been loaded
@@ -164,6 +165,17 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                         return;
                     }
 
+
+                    if (profileConfig.defaultStatusAfterExporting &&
+                        element.sourceId > 0 &&
+                        profileConfig.defaultStatusAfterExporting > 0) {
+                        try {
+                            await patchStatus(user.profile, user.key, element.sourceId, profileConfig.defaultStatusAfterExporting);
+                        } catch (err) {
+                            console.error('Failed to set situacao.', err);
+                        }
+                    }
+
                     itemToProcess.success.push('Pedido criado com sucesso.')
                     itemToProcess.status = OrderStatus.Exported;
                     setComponentData(p => ({ ...p }))
@@ -255,6 +267,10 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
         try {
             date ??= componentData.selectedDate;
             let orders = await getOrders(user.profile, user.key, date);
+            let profileConfig = await getProfileConfig(user.profile, user.key);
+            console.log('Profile collected: ')
+            console.log(profileConfig);
+            setProfileConfig(profileConfig);
             setComponentData(p => ({
                 ...p,
                 orders: orders,
@@ -307,7 +323,7 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                 setDefaultCustomer(customer);
                 return { success: true, customer };
             }
-        } catch(error) {
+        } catch (error) {
             console.error(`Failed to get `, error)
         }
 
@@ -354,20 +370,20 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                     componentData.products,
                     componentData.productsToExport,
                     dcustomer);
-                
+
                 if (order.exportedOrderId) {
-                    
+
                     try {
                         let result = await getOrderById(
                             userToExport.profile,
                             userToExport.key,
                             order.exportedOrderId
                         )
-                        
-                        if (typeof result.data.numero === 'number'){
-                            
-                            order.exportedOrderCode = result.data.numero;   
-                            
+
+                        if (typeof result.data.numero === 'number') {
+
+                            order.exportedOrderCode = result.data.numero;
+
                         }
                     } catch {
 
@@ -499,8 +515,8 @@ const OrderExportTable: React.FC<InputPageData> = ({ user, userToExport, exportC
                                             </td>
                                             <td>
                                                 {order.exportedOrderCode
-                                                ? `${order.number} / ${order.exportedOrderCode}`
-                                                : order.number}
+                                                    ? `${order.number} / ${order.exportedOrderCode}`
+                                                    : order.number}
                                             </td>
                                             <td>{new Date(order.date).toLocaleDateString('pt-BR')}</td>
                                             <td>
