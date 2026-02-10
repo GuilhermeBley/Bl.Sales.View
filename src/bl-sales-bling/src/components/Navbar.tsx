@@ -53,6 +53,11 @@ const Navbar: React.FC = () => {
                 Início
               </Link>
             </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/label-to-pdf">
+                Etiquetas para PDF
+              </Link>
+            </li>
           </ul>
 
           {/* User info and logout - right side */}
