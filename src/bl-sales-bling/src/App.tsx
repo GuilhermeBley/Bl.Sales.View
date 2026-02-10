@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Home from './pages/Home';
 import Orders from './pages/Orders';
 import RedirectAuth from './pages/RedirectAuth';
+import LabelToPdf from './pages/LabelToPdf';
 
 function App() {
   return (
@@ -29,6 +30,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Orders />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/label-to-pdf"
+                element={
+                  <ProtectedRoute>
+                    <LabelToPdf />
                   </ProtectedRoute>
                 }
               />
