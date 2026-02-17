@@ -14,7 +14,7 @@ interface LabelProcessResult {
 
 const MAX_FILE_SIZE_MB = 64;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-const REQUEST_DELAY_MS = 500; // Delay between requests to avoid rate limiting
+const REQUEST_DELAY_MS = 400; // Delay between requests to avoid rate limiting
 const DEFAULT_MAX_PDF_PAGES = 200;
 const MAX_PDF_PAGES_STORAGE_KEY = 'labelToPdf_maxPdfPages';
 
@@ -118,7 +118,7 @@ const LabelToPdf: React.FC = () => {
                 setProgress(Math.round(((i + 1) / lines.length) * 100));
 
                 try {
-                    const pngBlob = await labelaryService.generateLabelByText(line, 3, 2000);
+                    const pngBlob = await labelaryService.generateLabelByText(line, 3, 1000);
                     const dataUrl = await blobToDataUrl(pngBlob);
                     
                     processedResults.push({
