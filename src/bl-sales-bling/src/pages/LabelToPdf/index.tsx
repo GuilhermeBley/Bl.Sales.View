@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Container, Card, Button, ProgressBar, Alert, Form } from 'react-bootstrap';
-import { jsPDF } from 'jspdf';
+import { PDFDocument } from 'pdf-lib';
 import Navbar from '../../components/Navbar';
 import labelaryService from '../../services/labelaryService';
 import LocalStorageManager from '../../services/localStorageService';
@@ -8,7 +8,7 @@ import LocalStorageManager from '../../services/localStorageService';
 interface LabelProcessResult {
     index: number;
     success: boolean;
-    imageDataUrl?: string;
+    pdfBlob?: Blob;
     error?: string;
 }
 
@@ -78,15 +78,6 @@ const LabelToPdf: React.FC = () => {
         setFile(selectedFile);
     };
 
-    const blobToDataUrl = (blob: Blob): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    };
-
     const processLabels = async () => {
         if (!file) {
             setError('Por favor, selecione um arquivo.');
@@ -100,31 +91,30 @@ const LabelToPdf: React.FC = () => {
 
         try {
             const text = await file.text();
-            const lines = text.split('\n').filter(line => line.trim().length > 0);
+            const labels = labelaryService.splitLabelText(text);
             
-            if (lines.length === 0) {
+            if (labels.length === 0) {
                 setError('O arquivo está vazio ou não contém linhas válidas.');
                 setIsProcessing(false);
                 return;
             }
 
-            setTotalLabels(lines.length);
+            setTotalLabels(labels.length);
             const processedResults: LabelProcessResult[] = [];
 
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
+            for (let i = 0; i < labels.length; i++) {
+                const line = labels[i].trim();
                 setCurrentLabel(i + 1);
-                setStatusMessage(`Processando etiqueta ${i + 1} de ${lines.length}...`);
-                setProgress(Math.round(((i + 1) / lines.length) * 100));
+                setStatusMessage(`Processando etiqueta ${i + 1} de ${labels.length}...`);
+                setProgress(Math.round(((i + 1) / labels.length) * 100));
 
                 try {
-                    const pngBlob = await labelaryService.generateLabelByText(line, 3, 1000);
-                    const dataUrl = await blobToDataUrl(pngBlob);
+                    const pdfBlob = await labelaryService.generatePdfByText(line, { allLabels: false }, 3, 1000);
                     
                     processedResults.push({
                         index: i,
                         success: true,
-                        imageDataUrl: dataUrl
+                        pdfBlob: pdfBlob
                     });
                 } catch (err) {
                     const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -142,7 +132,7 @@ const LabelToPdf: React.FC = () => {
 
             setResults(processedResults);
             const successCount = processedResults.filter(r => r.success).length;
-            setStatusMessage(`Processamento concluído: ${successCount} de ${lines.length} etiquetas processadas com sucesso.`);
+            setStatusMessage(`Processamento concluído: ${successCount} de ${labels.length} etiquetas processadas com sucesso.`);
 
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -153,7 +143,7 @@ const LabelToPdf: React.FC = () => {
     };
 
     const generatePdf = async () => {
-        const allSuccessfulResults = results.filter(r => r.success && r.imageDataUrl);
+        const allSuccessfulResults = results.filter(r => r.success && r.pdfBlob);
         
         if (allSuccessfulResults.length === 0) {
             setError('Nenhuma etiqueta foi processada com sucesso.');
@@ -170,42 +160,35 @@ const LabelToPdf: React.FC = () => {
         setStatusMessage(`Gerando ${totalPdfs} PDF(s)...`);
 
         try {
-            // Create PDF with 4x6 inch label size (in mm: 101.6 x 152.4)
-            const labelWidthMm = 101.6;
-            const labelHeightMm = 152.4;
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 
             for (let pdfIndex = 0; pdfIndex < chunks.length; pdfIndex++) {
                 const chunk = chunks[pdfIndex];
                 
-                const pdf = new jsPDF({
-                    orientation: 'portrait',
-                    unit: 'mm',
-                    format: [labelWidthMm, labelHeightMm]
-                });
+                // Create a new PDF document to merge all label PDFs
+                const mergedPdf = await PDFDocument.create();
 
-                for (let i = 0; i < chunk.length; i++) {
-                    const result = chunk[i];
-                    
-                    if (i > 0) {
-                        pdf.addPage([labelWidthMm, labelHeightMm], 'portrait');
-                    }
-
-                    if (result.imageDataUrl) {
-                        pdf.addImage(
-                            result.imageDataUrl,
-                            'PNG',
-                            0,
-                            0,
-                            labelWidthMm,
-                            labelHeightMm
-                        );
+                for (const result of chunk) {
+                    if (result.pdfBlob) {
+                        const pdfBytes = await result.pdfBlob.arrayBuffer();
+                        const sourcePdf = await PDFDocument.load(pdfBytes);
+                        const copiedPages = await mergedPdf.copyPages(sourcePdf, sourcePdf.getPageIndices());
+                        copiedPages.forEach(page => mergedPdf.addPage(page));
                     }
                 }
 
-                // Download the PDF with part number if multiple PDFs
+                // Save and download the merged PDF
+                const mergedPdfBytes = await mergedPdf.save();
+                const blob = new Blob([new Uint8Array(mergedPdfBytes)], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.href = url;
                 const partSuffix = totalPdfs > 1 ? `_parte${pdfIndex + 1}de${totalPdfs}` : '';
-                pdf.save(`etiquetas_${timestamp}${partSuffix}.pdf`);
+                link.download = `etiquetas_${timestamp}${partSuffix}.pdf`;
+                link.click();
+                
+                URL.revokeObjectURL(url);
                 
                 // Small delay between PDF downloads to avoid browser blocking
                 if (pdfIndex < chunks.length - 1) {
