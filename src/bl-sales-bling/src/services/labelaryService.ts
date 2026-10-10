@@ -75,10 +75,59 @@ class LabelaryService {
         throw lastError ?? new Error('Failed to generate PDF from Labelary API');
     }
 
+    // Splits a ZPL file into self-contained label formats (^XA...^XZ).
+    // Graphics downloaded with ~DG (usually outside any format) are prepended to the
+    // formats that recall them via ^XG/^IM, and formats that print nothing (e.g. ^IDR) are dropped.
     splitLabelText(zpl: string): string[] {
-        const labelMark = zpl.startsWith('^XA') ? '^XA' : '\n';
-        const parts = zpl.split(labelMark).filter(part => part.trim() !== '');
-        return parts.map(part => labelMark + part.trim() + labelMark);
+        const text = zpl.replace(/^﻿/, '');
+
+        if (!text.includes('^XA')) {
+            return text.split('\n').map(line => line.trim()).filter(line => line !== '');
+        }
+
+        const graphics = new Map<string, string>();
+        const labels: string[] = [];
+        const formatRegex = /\^XA([\s\S]*?)(?:\^XZ|$)/g;
+        let lastIndex = 0;
+        let match: RegExpExecArray | null;
+
+        while ((match = formatRegex.exec(text)) !== null) {
+            this.registerGraphics(text.slice(lastIndex, match.index), graphics);
+            lastIndex = formatRegex.lastIndex;
+
+            const body = match[1];
+            if (!/\^(?:FD|FV|XG|IM|GF|GB|GC|GD|GE|GS|B[0-9A-Z])/.test(body)) {
+                this.registerGraphics(body, graphics);
+                continue;
+            }
+
+            const definedInBody = new Map<string, string>();
+            this.registerGraphics(body, definedInBody);
+
+            const prefix = Array.from(body.matchAll(/\^(?:XG|IM)([^,^~]+)/g))
+                .map(ref => this.normalizeGraphicName(ref[1]))
+                .filter((name, i, all) => all.indexOf(name) === i && !definedInBody.has(name) && graphics.has(name))
+                .map(name => graphics.get(name))
+                .join('');
+
+            labels.push(`${prefix}^XA${body.trim()}^XZ`);
+            definedInBody.forEach((command, name) => graphics.set(name, command));
+        }
+
+        return labels;
+    }
+
+    private registerGraphics(zpl: string, graphics: Map<string, string>): void {
+        for (const download of Array.from(zpl.matchAll(/~DG([^,~^]+),[^~^]*/g))) {
+            graphics.set(this.normalizeGraphicName(download[1]), download[0].trim());
+        }
+    }
+
+    private normalizeGraphicName(name: string): string {
+        let normalized = name.trim().toUpperCase();
+        if (!normalized.includes(':')) normalized = `R:${normalized}`;
+        if (!normalized.includes('.')) normalized = `${normalized}.GRF`;
+        return normalized;
     }
 
     async generateLabelByText(zpl: string, maxRetries: number = 3, retryDelayMs: number = 2000): Promise<Blob> {
