@@ -6,11 +6,6 @@
   "mimeTypes": {
     ".json": "text/json"
   },
-  "responseOverrides": {
-    "404": {
-      "rewrite": "/index.html"
-    }
-  },
   "globalHeaders": {
     "X-Frame-Options": "DENY",
     "X-XSS-Protection": "1; mode=block",
